@@ -128,7 +128,11 @@ that excludes 0, and the deflated Sharpe ratio of the best configuration exceeds
 
 ## Deviations
 
-No deviation so far.
+No pre-specified choice (events, stocks, hypothesised signs, windows, tests, Holm family, finding
+criteria, trading configurations, costs, sensitivities) has been changed. The study was run once
+(2eeba12); the files it wrote then are unchanged in later commits except that the manifests were
+rewritten, floating-point formats changed in a few files, and the trading tables gained
+gross-return columns (item 6).
 
 Clarifications written before the run (2026-11-05), while implementing the protocol; they fill
 gaps in the text above and were decided without looking at any event return:
@@ -140,3 +144,33 @@ gaps in the text above and were decided without looking at any event return:
 3. The placebo exclusion list is every geometric US landfall of any intensity from 1985 on.
 4. For the pooled rank test the signed abnormal returns and signed estimation residuals are
    ranked.
+
+Notes and additions written after the run (2026-11-05), following an independent review of the
+repository. None of them changes a number the run produced; the additions are marked as such in
+the README.
+
+5. The Holm family is the 24 BMP p-values (8 stocks x 3 windows), as stated under "Tests". The
+   smallest raw p-value is 0.252 (MRK, window [-5, +10]), so every adjusted p-value is 1.
+6. Added analyses, not pre-specified: the power of each stock's test at its own event count and
+   residual volatility (`experiments/per_stock_power.py`; the earlier simulated power of about 44%
+   at a 2% effect assumed a residual sd of 2% a day for every stock, which is right for one stock
+   only); the gross (before cost) return of each trading rule next to the net return; a
+   forward-only evaluation of the trading rules (each season's configuration chosen on earlier
+   seasons only) next to leave-one-season-out, which also uses later seasons and is therefore
+   cross-validation; the three largest event CARs of each stock (`largest_events.csv`).
+7. Facts about the event list found after the run, none of which changes it. The geometric rule
+   finds no US landfall for Dorian 2019 (HURDAT2 flags a landfall at Cape Hatteras at 85 kt, but
+   the 10-minute interpolation of the track never touches land) and excludes Barry 2019, Cindy
+   2005 and Gaston 2004, which are flagged at 65 kt but reach 56-63 kt at the interpolated crossing
+   (`results/landfall_counts/storm_level_disagreements.csv`); the flag-event sensitivity includes
+   them. The `status` column of `events.csv` is the status of the earlier synoptic fix carried
+   into the interpolation: Sandy 2012 reads HU although HURDAT2's landfall record is
+   extratropical at 70 kt; the rule uses wind only. The event of Katrina 2005 is its first
+   geometric landfall, in Florida on 2005-08-25 at 22:30 UTC (interpolated 67.5 kt, status TS);
+   its day 0 is 2005-08-26, and the Louisiana landfall of 2005-08-29 (110 kt) falls on day +1 of
+   the window [0, +10].
+8. Forecast verification (README section 3): origins are fixes with tropical or subtropical
+   status (TD, TS, HU, SD, SS) that have fixes 12 and 24 h earlier; the verifying fix may have any
+   status, extratropical stages included.
+9. Day 0 assumes that the close is at 20:00 UTC (US daylight time). In winter the close is at
+   21:00 UTC, so a landfall between 20:00 and 21:00 UTC would be assigned to the next trading day.

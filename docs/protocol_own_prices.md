@@ -4,7 +4,7 @@ Written on 2026-11-05, before any insurer, reinsurer or futures price existed in
 or had been looked at by its author. This is the test of the project's central hypothesis that
 could not be run where the repository was built. It is run by `scripts/run_own_prices.py` on
 prices the person running it supplies, and its output is reported whatever it is. It follows
-`docs/protocol.md` (the wave-1 study of eight large US stocks) wherever this file does not say
+`docs/protocol.md` (the study of eight large US stocks that was run first) wherever this file does not say
 otherwise; the differences are listed at the end.
 
 ## Before loading any price: commit two files
@@ -31,11 +31,11 @@ and list them in the run record.
   `data/`). The loader rejects unsorted or duplicate dates, non-positive and non-finite prices,
   and reports gaps, stale series and daily moves beyond 50%.
 - Market index: the S&P 500 (state in the run record whether it is the price or the total-return
-  index; wave 1 used the price index).
+  index; the eight-stock study used the price index).
 - Alignment: each asset is aligned with the index on the dates on which both have a close;
   returns are simple close-to-close returns on that common calendar.
 - Tracks and events: nothing new is computed from tracks. The run reads three files committed
-  with wave 1: `results/real_eventstudy/events.csv` (the event list),
+  with the eight-stock study: `results/real_eventstudy/events.csv` (the event list),
   `results/landfall_counts/us_landfalls_any_intensity_1985_2024.csv` (placebo exclusions) and
   `results/real_eventstudy/landfall_probabilities.csv.gz` (forecast-trigger signals).
 
@@ -46,7 +46,7 @@ geometric US hurricane landfall of each storm, 1990-2022, after the overlap rule
 `docs/protocol.md`. The list is not re-derived for the new prices. Day 0 of an asset is the first
 date of its calendar whose close (taken as 20:00 UTC) is at or after the landfall time. An
 asset-event is used only if its estimation and event windows lie inside that asset's data; the
-number not used is reported per asset. The same data screen as wave 1 applies: an asset-event is
+number not used is reported per asset. The same data screen as in the eight-stock study applies: an asset-event is
 excluded if more than 10% of its estimation-window returns or of its event-window returns are
 exactly zero.
 
@@ -65,7 +65,7 @@ The signs and reasons below are hypotheses written before any price was seen, no
 | storm-relevant | OJ (orange-juice futures, ICE FCOJ-A) | future | + | damage to the Florida citrus crop reduces supply |
 | storm-relevant | LUMBER (CME lumber futures) | future | + | rebuilding raises lumber demand |
 | storm-relevant | NG (NYMEX Henry Hub natural-gas futures) | future | two-sided | Gulf of Mexico production shut-ins raise prices, while power outages, closed LNG export terminals and lower demand lower them; the Gulf's share of US gas output fell over 1990-2022, so the net sign is not specified |
-| control | MSFT, JNJ, MRK, PFE | stock | none | no obvious hurricane link (the wave-1 controls) |
+| control | MSFT, JNJ, MRK, PFE | stock | none | no obvious hurricane link (the controls of the eight-stock study) |
 
 An alternative to the insurer hypothesis, stated so that a positive result is not explained
 after the fact: after large losses insurers may raise premiums, and investors may expect that.
@@ -108,11 +108,16 @@ placebo values at or below the real value and the two-sided placebo p-value. See
 
 ## Statistical power (state it with the result)
 
-With about 35 events per asset the wave-1 simulation under GARCH-t returns
+Power depends on an asset's own number of events and volatility. With about 35 events and a
+residual sd of 2% a day, a simulation under GARCH-t returns
 (`results/synthetic_eventstudy/garch_t_35x1.csv`, BMP test) detects a CAR of 1% in about 16% of
-samples and of 2% in about 44%. Insurer and futures returns are more volatile than the wave-1 stocks, so the
-detectable effect is larger still. A null result per asset therefore rules out only large
-effects; the report states the bootstrap interval of each mean CAR so that the reader sees which
+samples and of 2% in about 44%; the eight stocks of the first study have a residual sd of 1.0-1.5%
+a day (RRC: 3.2%), and at their own volatility a true 2% is detected with probability 68-92% for
+seven of them and 18% for RRC (`results/per_stock_power/summary.csv`). Insurer and futures
+returns may well be more volatile than those large stocks, so the detectable effect may be
+larger. `scripts/run_own_prices.py` therefore simulates the power of the BMP test at each asset's
+own number of events and residual volatility (`power_by_asset.csv`); quote it with the result.
+The report also states the bootstrap interval of each mean CAR so that the reader sees which
 effects are excluded.
 
 ## Trading rules
@@ -140,16 +145,17 @@ that excludes 0, and a deflated Sharpe ratio above 0.95.
 - Assets, kinds and signs as above; a two-sided asset (natural gas) is tested individually but
   not pooled or traded.
 - Each asset has its own calendar (dates on which it and the index both have a close).
-- The event list, the placebo exclusions and the forecast probabilities are read from the wave-1
+- The event list, the placebo exclusions and the forecast probabilities are read from the eight-stock
   results instead of being recomputed.
 - The flag-based event-list sensitivity is not repeated (it needs the track files).
 - The deflated Sharpe ratio counts N = 9 K trials.
 
 ## Limitations known in advance
 
-- Day 0 assumes a 20:00 UTC close for every series; orange juice, natural gas and lumber
-  futures settle earlier in the US afternoon, so a landfall between the settlement and 20:00
-  UTC is assigned to that day's close although the futures had already settled.
+- Day 0 assumes a 20:00 UTC close for every series (US stocks in daylight time; in winter the
+  equity close is at 21:00 UTC); orange juice, natural gas and lumber futures settle earlier in
+  the US afternoon, so a landfall between the settlement and 20:00 UTC is assigned to that day's
+  close although the futures had already settled.
 - Continuous front-month futures series mix contracts; roll dates inside event windows add noise.
 - The forecast trigger comes from the statistical model of this repository, not from NHC
   advisories; the result says nothing about NHC forecasts as issued.
@@ -170,3 +176,14 @@ that excludes 0, and a deflated Sharpe ratio above 0.95.
   at 5%, `results/placebo_size/summary.csv`), while BMP holds its level. The criterion above is not
   changed, because it also requires the Holm-adjusted BMP p-value; a small placebo p-value on its
   own is to be reported as weak evidence.
+- 2026-11-05, before any real price was used (notes added after an independent review):
+  1. This protocol was written after the results of the eight-stock study were known
+     (`docs/protocol.md`; commit 2eeba12 precedes this file's), among them that RRC, a natural-gas
+     producer with a hypothesised positive sign, had a mean CAR[0, +10] of -1.2%. Natural gas was
+     made two-sided for the reasons in the assets table (Gulf shut-ins raise prices, outages and
+     closed export terminals lower demand); a reader should weigh the choice of that sign in the
+     light of the RRC result having been seen first.
+  2. `check_prices` now also warns about a daily move within 3% (in logs) of a split ratio (1.5, 2,
+     3, 4, 5 or 10, or its inverse), which the 50% rule under "Data" would miss for an unadjusted
+     3:2 or 2:1 split. A warning is not an exclusion; the person running the protocol decides.
+  3. `scripts/run_own_prices.py` writes `power_by_asset.csv` (see "Statistical power").
