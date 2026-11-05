@@ -1,0 +1,33 @@
+{
+ "seasons": "1975-2019",
+ "storms_rda": 721,
+ "storms_dplyr": 588,
+ "storms_both": 588,
+ "storms_only_rda": 133,
+ "storms_only_dplyr": 0,
+ "fixes_rda": 19416,
+ "fixes_dplyr": 17199,
+ "fixes_matched": 17199,
+ "fixes_rda_missing_pressure": 1942,
+ "storms_only_rda_all_pressure_missing": 114,
+ "storms_only_rda_no_td_ts_hu": 19,
+ "fixes_rda_unmatched_in_common_storms": 269,
+ "diff_lat": 0,
+ "maxabs_lat": 0.0,
+ "diff_lon": 1,
+ "maxabs_lon": 0.20000000000000284,
+ "diff_vmax_kt": 39,
+ "maxabs_vmax_kt": 25.0,
+ "diff_mslp_mb": 1,
+ "maxabs_mslp_mb": 1.0,
+ "diff_status": 5,
+ "rda_loader_notes": [
+  "rows 0-13: missing Key/Name, assigned AL011851 (precedes AL021851)",
+  "34 NA longitudes set to -99.0 or 0.0 from their neighbours",
+  "18 longitudes outside (-180, 180] wrapped"
+ ],
+ "dplyr_loader_notes": [
+  "52 rows share storm and hour with another row (minutes were dropped by the mirror); all are kept, in file order",
+  "ZETA_2005: spans two calendar years; rows re-joined into one storm"
+ ]
+}

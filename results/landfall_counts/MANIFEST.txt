@@ -1,0 +1,11 @@
+command: python experiments/landfall_counts.py
+seed: none (deterministic)
+git_commit: 066a87a4031663be75ddf853119f4f4f243d5e63
+working_tree: clean
+date_utc: 2026-11-05T07:02:03Z
+python: 3.13.18
+numpy: 2.5.3
+machine: x86_64 Linux 6.18.44-fc-v236
+land_mask: global-land-mask 1.0.0, 1/120 degree, Atlantic crop
+geometric_rule: 10-min steps, >= 1 h at sea before crossing
+matching: same storm, <= 6 h and <= 150 km
