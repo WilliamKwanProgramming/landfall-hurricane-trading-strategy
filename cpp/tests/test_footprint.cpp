@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <random>
 #include <vector>
 
 #include "landfall/footprint.hpp"
@@ -127,6 +128,62 @@ void test_max_wind_and_grid() {
   check(ex[0] == 1.0 && ex[2] == 0.0, "exceedance fractions");
 }
 
+
+// The optimised kernel against the wave-1 reference kernel on random storms in four regions:
+// anywhere, near the pole, across the date line, and with points at the storm centre.
+void test_optimised_equals_reference() {
+  struct Box {
+    const char* name;
+    double clat0, clat1, clon0, clon1, plat0, plat1, plon0, plon1;
+  };
+  const Box boxes[] = {
+      {"random", -60, 60, -180, 180, -60, 60, -180, 180},
+      {"near the pole", 86, 89, -180, 180, 87, 89.999, -180, 180},
+      {"across the date line", 10, 30, 179, 179.8, 10, 30, -179.9, -179},
+      {"near the storm centre", 24.9, 25.1, -80.1, -79.9, 24.9, 25.1, -80.1, -79.9},
+  };
+  std::vector<std::uint8_t> land(1, 0);
+  const landfall::LandGridView g{0.0, 0.0, 1.0, 1.0, 1, 1, land.data()};
+  std::mt19937_64 rng(42);
+  auto unif = [&rng](double lo, double hi) {
+    return std::uniform_real_distribution<double>(lo, hi)(rng);
+  };
+  const std::int64_t n = 8, k = 4, np = 40;
+  const std::vector<double> node{0.0, 6.0, 12.0, 24.0};
+  for (const Box& bx : boxes) {
+    std::vector<double> la(n * k), lo(n * k), vm(n * k), rm(n), b(n), plat(np), plon(np);
+    for (std::size_t i = 0; i < static_cast<std::size_t>(n * k); ++i) {
+      la[i] = unif(bx.clat0, bx.clat1);
+      lo[i] = unif(bx.clon0, bx.clon1);
+      vm[i] = unif(40, 160);
+    }
+    for (std::size_t i = 0; i < static_cast<std::size_t>(n); ++i) {
+      rm[i] = unif(10, 80);
+      b[i] = unif(1.0, 2.5);
+    }
+    for (std::size_t p = 0; p < static_cast<std::size_t>(np); ++p) {
+      plat[p] = unif(bx.plat0, bx.plat1);
+      plon[p] = unif(bx.plon0, bx.plon1);
+    }
+    plat[0] = la[0];  // a point exactly at the first centre
+    plon[0] = lo[0];
+    const landfall::StormArrays s{node.data(), k, la.data(), lo.data(), vm.data(),
+                                  rm.data(),   b.data(), n};
+    std::vector<double> fast(n * np), ref(n * np);
+    const bool ok = landfall::max_wind(s, plat.data(), plon.data(), np, g, 0.5, true,
+                                       fast.data()) &&
+                    landfall::max_wind_reference(s, plat.data(), plon.data(), np, g, 0.5, true,
+                                                 ref.data());
+    double worst = 0.0;
+    for (std::size_t i = 0; i < fast.size(); ++i) {
+      worst = std::max(worst, std::fabs(fast[i] - ref[i]) / std::max(std::fabs(ref[i]), 1e-12));
+    }
+    if (!(ok && worst <= 1e-9)) std::printf("  %s: worst relative difference %.3g\n", bx.name,
+                                            worst);
+    check(ok && worst <= 1e-9, "optimised kernel equals the reference kernel within 1e-9");
+  }
+}
+
 }  // namespace
 
 int main() {
@@ -134,6 +191,7 @@ int main() {
   test_decay();
   test_wind_speed();
   test_max_wind_and_grid();
+  test_optimised_equals_reference();
   if (failures == 0) std::printf("all footprint kernel tests passed\n");
   return failures == 0 ? 0 : 1;
 }

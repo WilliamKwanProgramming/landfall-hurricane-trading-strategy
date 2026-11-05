@@ -21,7 +21,10 @@ void need(bool ok, const std::string& what) {
   if (!ok) throw std::invalid_argument(what);
 }
 
-py::array_t<double> max_wind_py(const Dbl& node_h, const Dbl& lat, const Dbl& lon,
+using Kernel = bool (*)(const landfall::StormArrays&, const double*, const double*, std::int64_t,
+                       const landfall::LandGridView&, double, bool, double*);
+
+py::array_t<double> run_kernel(Kernel kernel, const Dbl& node_h, const Dbl& lat, const Dbl& lon,
                                 const Dbl& vmax, const Dbl& rm, const Dbl& b, const Dbl& lat_p,
                                 const Dbl& lon_p, double lat0, double lon0, double dlat,
                                 double dlon, const U8& land, double dt_h, bool decay) {
@@ -45,11 +48,19 @@ py::array_t<double> max_wind_py(const Dbl& node_h, const Dbl& lat, const Dbl& lo
   bool ok = false;
   {
     py::gil_scoped_release release;
-    ok = landfall::max_wind(s, lat_p.data(), lon_p.data(), p, g, dt_h, decay,
-                            out.mutable_data());
+    ok = kernel(s, lat_p.data(), lon_p.data(), p, g, dt_h, decay, out.mutable_data());
   }
   need(ok, "node_h must have at least two strictly increasing values and dt_h must be > 0");
   return out;
+}
+
+template <Kernel K>
+py::array_t<double> max_wind_py(const Dbl& node_h, const Dbl& lat, const Dbl& lon,
+                                const Dbl& vmax, const Dbl& rm, const Dbl& b, const Dbl& lat_p,
+                                const Dbl& lon_p, double lat0, double lon0, double dlat,
+                                double dlon, const U8& land, double dt_h, bool decay) {
+  return run_kernel(K, node_h, lat, lon, vmax, rm, b, lat_p, lon_p, lat0, lon0, dlat, dlon, land,
+                    dt_h, decay);
 }
 
 py::array_t<double> exceedance_py(const Dbl& maxwind, const Dbl& thresholds) {
@@ -66,9 +77,12 @@ py::array_t<double> exceedance_py(const Dbl& maxwind, const Dbl& thresholds) {
 
 PYBIND11_MODULE(landfall_cpp, m) {
   m.doc() = "C++ footprint Monte Carlo kernel (twin of landfall.footprint.max_wind_numpy)";
-  m.def("max_wind", &max_wind_py, "node_h"_a, "lat"_a, "lon"_a, "vmax"_a, "rm"_a, "b"_a,
-        "lat_p"_a, "lon_p"_a, "lat0"_a, "lon0"_a, "dlat"_a, "dlon"_a, "land"_a, "dt_h"_a,
-        "decay"_a);
+  m.def("max_wind", &max_wind_py<landfall::max_wind>, "node_h"_a, "lat"_a, "lon"_a, "vmax"_a,
+        "rm"_a, "b"_a, "lat_p"_a, "lon_p"_a, "lat0"_a, "lon0"_a, "dlat"_a, "dlon"_a, "land"_a,
+        "dt_h"_a, "decay"_a);
+  m.def("max_wind_reference", &max_wind_py<landfall::max_wind_reference>, "node_h"_a, "lat"_a,
+        "lon"_a, "vmax"_a, "rm"_a, "b"_a, "lat_p"_a, "lon_p"_a, "lat0"_a, "lon0"_a, "dlat"_a,
+        "dlon"_a, "land"_a, "dt_h"_a, "decay"_a);
   m.def("exceedance", &exceedance_py, "maxwind"_a, "thresholds"_a);
   m.def("symmetric_profile", &landfall::symmetric_profile, "r_km"_a, "vm_kt"_a, "rm_km"_a,
         "b"_a);

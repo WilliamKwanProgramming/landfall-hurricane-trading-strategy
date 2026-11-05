@@ -187,3 +187,47 @@ def test_cpp_rejects_bad_input():
     with pytest.raises(ValueError):
         m.max_wind(s.node_h, s.lat[:, :3], s.lon, s.vmax_kt, s.rm_km, s.b, np.zeros(1),
                    np.zeros(1), 0, 0, 1, 1, np.zeros((1, 1), np.uint8), 0.5, True)
+
+
+# Inputs for the three-way comparison: (name, centre latitudes, centre longitudes, point
+# latitudes, point longitudes). Polar-adjacent and date-line-adjacent cases test the half-angle
+# identities of the optimised kernel where they could lose accuracy or wrap.
+_THREE_WAY = {
+    "random": ((-60.0, 60.0), (-180.0, 180.0), (-60.0, 60.0), (-180.0, 180.0)),
+    "near the pole": ((86.0, 89.0), (-180.0, 180.0), (87.0, 89.999), (-180.0, 180.0)),
+    "across the date line": ((10.0, 30.0), (179.0, 179.8), (10.0, 30.0), (-179.9, -179.0)),
+    "near the storm centre": ((24.9, 25.1), (-80.1, -79.9), (24.9, 25.1), (-80.1, -79.9)),
+}
+
+
+@pytest.mark.parametrize("case", sorted(_THREE_WAY))
+@pytest.mark.parametrize("decay", [True, False])
+def test_optimised_reference_and_numpy_agree(case, decay):
+    cpp_module()
+    clat, clon, plat, plon = _THREE_WAY[case]
+    rng = np.random.default_rng(sorted(_THREE_WAY).index(case))
+    n, k = 12, 4
+    node = np.array([0.0, 6.0, 12.0, 24.0])
+    # Slow storms that stay inside the stated boxes; vmax and structure as in real storms.
+    lat = rng.uniform(*clat, (n, 1)) + np.cumsum(rng.normal(0, 0.05, (n, k)), axis=1)
+    lon = rng.uniform(*clon, (n, 1)) + np.cumsum(rng.normal(0, 0.05, (n, k)), axis=1)
+    lat, lon = np.clip(lat, *clat), np.clip(lon, *clon)
+    s = fp.StormSet(node, lat, lon, rng.uniform(40, 160, (n, k)), rng.uniform(10, 80, n),
+                    rng.uniform(1.0, 2.5, n))
+    lat_p, lon_p = rng.uniform(*plat, 60), rng.uniform(*plon, 60)
+    if case == "near the storm centre":  # points exactly at some sub-step centres
+        lat_p[:3], lon_p[:3] = lat[:3, 0], lon[:3, 0]
+    ref = fp.max_wind_numpy(s, lat_p, lon_p, GRID, dt_h=0.5, decay=decay)
+    old = fp.max_wind_cpp(s, lat_p, lon_p, GRID, dt_h=0.5, decay=decay, kernel="reference")
+    new = fp.max_wind_cpp(s, lat_p, lon_p, GRID, dt_h=0.5, decay=decay, kernel="optimised")
+    assert (ref > 1.0).mean() > 0.5  # the comparison is not between zeros
+    np.testing.assert_allclose(old, ref, rtol=1e-9, atol=1e-12)
+    np.testing.assert_allclose(new, ref, rtol=1e-9, atol=1e-12)
+    np.testing.assert_allclose(new, old, rtol=1e-9, atol=1e-12)
+
+
+def test_cpp_kernel_name_is_checked():
+    cpp_module()
+    s = _storms(2)
+    with pytest.raises(ValueError, match="kernel"):
+        fp.max_wind_cpp(s, np.zeros(1), np.zeros(1), GRID, kernel="fast")

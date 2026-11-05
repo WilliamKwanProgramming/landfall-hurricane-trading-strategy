@@ -50,9 +50,22 @@ struct StormArrays {
 // Maximum surface wind over each storm's track at each point; writes out[s * n_points + p].
 // Returns false (and writes nothing) if the inputs are inconsistent (fewer than two nodes,
 // non-increasing node times, dt_h <= 0).
+//
+// Optimised kernel: the sines and cosines that depend only on a point are computed once per
+// point, those that depend only on the storm position once per (storm, step), and the
+// trigonometric functions of the longitude and latitude differences come from half-angle
+// identities, so the innermost loop calls only asin, pow, exp and sqrt. Same formulas as
+// max_wind_reference; results agree with it and with NumPy within 1e-9 relative (tested; the
+// largest difference seen, 2e-12, is for points a few km from the centre).
 bool max_wind(const StormArrays& storms, const double* lat_p, const double* lon_p,
               std::int64_t n_points, const LandGridView& grid, double dt_h, bool decay,
               double* out);
+
+// The first (wave-1) kernel, kept unchanged as a reference for tests and the benchmark: it
+// calls wind_speed() for every (storm, step, point), i.e. about fifteen libm functions each.
+bool max_wind_reference(const StormArrays& storms, const double* lat_p, const double* lon_p,
+                        std::int64_t n_points, const LandGridView& grid, double dt_h, bool decay,
+                        double* out);
 
 // Fraction of storms with max wind >= threshold: out[t * n_points + p].
 void exceedance(const double* maxwind, std::int64_t n_storms, std::int64_t n_points,

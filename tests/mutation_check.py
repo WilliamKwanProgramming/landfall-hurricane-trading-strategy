@@ -99,6 +99,20 @@ MUTANTS = [
          "const double ue = vs * cos_th + k * ce;"),
         ("cpp/src/footprint.cpp", "const double un = vs * sin_th + k * cn;",
          "const double un = -vs * sin_th + k * cn;")]),
+    ("C3 optimised C++ kernel: sign error in the half-angle sine of the longitude difference", [
+        ("cpp/src/footprint.cpp", "const double s_dl = slp[p] * clc - clp[p] * slc;",
+         "const double s_dl = slp[p] * clc + clp[p] * slc;")]),
+    ("C4 optimised C++ kernel: sine and cosine of the bearing swapped", [
+        ("cpp/src/footprint.cpp",
+         "const double cos_th = h > 0.0 ? x / h : 1.0;\n"
+         "        const double sin_th = h > 0.0 ? y / h : 0.0;",
+         "const double cos_th = h > 0.0 ? y / h : 1.0;\n"
+         "        const double sin_th = h > 0.0 ? x / h : 0.0;")]),
+    ("C5 optimised C++ kernel: cos(dl) = 1 - s^2 instead of 1 - 2 s^2 (half-angle identity)", [
+        ("cpp/src/footprint.cpp", "(1.0 - 2.0 * s_dl * s_dl)", "(1.0 - s_dl * s_dl)")]),
+    ("C6 optimised C++ kernel: per-point latitude sine taken from the half angle", [
+        ("cpp/src/footprint.cpp", "    sp[p] = std::sin(phi);",
+         "    sp[p] = std::sin(0.5 * phi);")]),
 ]
 
 

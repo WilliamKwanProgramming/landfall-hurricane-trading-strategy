@@ -195,15 +195,23 @@ def exceedance(maxwind: NDArray, thresholds_kt: ArrayLike) -> NDArray:
 
 
 def max_wind_cpp(storms: StormSet, lat_p: ArrayLike, lon_p: ArrayLike, grid: LandGrid,
-                 dt_h: float = 0.5, decay: bool = True) -> NDArray:
+                 dt_h: float = 0.5, decay: bool = True, kernel: str = "optimised") -> NDArray:
     """Same as `max_wind_numpy`, computed by the C++ extension `landfall_cpp`.
+
+    kernel="optimised" (default) hoists the trigonometric terms that depend only on the point or
+    only on the storm position out of the innermost loop; kernel="reference" is the first C++
+    kernel, which evaluates every term for every (storm, step, point) and is kept to compare
+    against (tests and experiments/benchmark_footprint.py).
 
     Build it with `cmake -S . -B build && cmake --build build`; the module is written to
     build/cpp/ (add that directory to sys.path or PYTHONPATH).
     """
     import landfall_cpp
 
-    return landfall_cpp.max_wind(
+    kernels = {"optimised": landfall_cpp.max_wind, "reference": landfall_cpp.max_wind_reference}
+    if kernel not in kernels:
+        raise ValueError(f"kernel must be one of {sorted(kernels)}, not {kernel!r}")
+    return kernels[kernel](
         storms.node_h, storms.lat, storms.lon, storms.vmax_kt, storms.rm_km, storms.b,
         np.asarray(lat_p, dtype=float), np.asarray(lon_p, dtype=float), grid.lat0, grid.lon0,
         grid.dlat, grid.dlon, grid.land, dt_h, decay)
