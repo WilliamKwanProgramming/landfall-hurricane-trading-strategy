@@ -15,3 +15,7 @@ build/
 data/raw/
 .env
 *.env
+
+# Derived caches (land-mask crop and similar), rebuilt on demand
+data/cache/
+*.egg-info/
