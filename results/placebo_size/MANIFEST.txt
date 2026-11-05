@@ -1,0 +1,12 @@
+command: python experiments/placebo_size.py --seed 20261105
+seed: 20261105
+git_commit: 83f0b31132828457449bfa50f21d21eca6f0ebab
+working_tree: modified code (uncommitted changes)
+date_utc: 2026-11-05T10:21:00Z
+python: 3.13.18
+numpy: 2.5.3
+machine: x86_64 Linux 6.18.44-fc-v236
+data: SYNTHETIC null prices
+reps: 60
+placebo_sets: 200
+assets_per_rep: 4

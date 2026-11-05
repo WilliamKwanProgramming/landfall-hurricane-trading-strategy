@@ -1,0 +1,5 @@
+test,level,tests,rejection_rate,mc_se
+placebo,0.05,240,0.158,0.024
+placebo,0.1,240,0.225,0.027
+bmp,0.05,240,0.05,0.014
+bmp,0.1,240,0.092,0.019

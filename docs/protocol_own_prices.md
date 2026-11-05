@@ -165,4 +165,8 @@ that excludes 0, and a deflated Sharpe ratio above 0.95.
 
 ## Deviations
 
-No deviation so far.
+- 2026-11-05, before any real price was used: `experiments/placebo_size.py` showed that the placebo
+  test rejects a true null more often than its level on synthetic prices without any effect (15.8%
+  at 5%, `results/placebo_size/summary.csv`), while BMP holds its level. The criterion above is not
+  changed, because it also requires the Holm-adjusted BMP p-value; a small placebo p-value on its
+  own is to be reported as weak evidence.
