@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Regenerate every result in results/ from a clean checkout.
 #
-#   bash scripts/reproduce.sh            # all experiments and tables
+#   bash scripts/reproduce.sh            # all experiments, tables and figures
 #   bash scripts/reproduce.sh --mutation # also the mutation check (about 20 more minutes)
 #
 # Needs Python >= 3.12 with the package installed (pip install -e ".[test,prices]"), cmake,
@@ -34,13 +34,24 @@ for sc in gaussian garch_t garch_t_event_variance garch_t_cross_correlation; do
 done
 step "$PY" experiments/synthetic_eventstudy.py --scenario garch_t --n-events 35 --n-assets 1 --seed "$SEED"
 step "$PY" experiments/real_eventstudy.py --seed "$SEED"
-# Speed of NumPy vs the two C++ kernels: indicative only, waits up to 10 min for a quiet machine.
+# The own-prices pipeline on SYNTHETIC prices (no real insurer or futures prices exist here).
+step "$PY" scripts/make_synthetic_prices.py --seed "$SEED"
+step "$PY" scripts/run_own_prices.py --prices data/synthetic/own_prices_synthetic.csv \
+  --assets docs/own_prices_assets.csv --market SPX --label synthetic \
+  --out results/own_prices_synthetic --seed "$SEED"
+step "$PY" experiments/placebo_size.py --seed "$SEED"
+PYTHONPATH="build/cpp${PYTHONPATH:+:$PYTHONPATH}" step "$PY" experiments/figure_data.py --seed "$SEED"
+# Instruction profile of the two kernels (needs valgrind; skipped without it).
+if command -v valgrind > /dev/null; then step "$PY" experiments/profile_kernel.py; fi
+# Speed of NumPy vs the two C++ kernels: indicative only, waits up to 2 min for a quiet machine.
 PYTHONPATH="build/cpp${PYTHONPATH:+:$PYTHONPATH}" step "$PY" experiments/benchmark_footprint.py \
-  --reps 15 --seed "$SEED" --wait-load 1.3 --wait-minutes 10
+  --reps 15 --seed "$SEED" --wait-load 1.3 --wait-minutes 2
 if [[ "${1:-}" == "--mutation" ]]; then
   step "$PY" tests/mutation_check.py --out results/mutation_check.txt
 fi
 step "$PY" scripts/make_tables.py
+step "$PY" scripts/make_figures.py
+step "$PY" scripts/check_readme_numbers.py
 
 elapsed=$(( $(date +%s) - start ))
 {

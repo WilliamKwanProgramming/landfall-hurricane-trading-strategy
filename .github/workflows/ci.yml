@@ -42,6 +42,24 @@ jobs:
         env:
           LANDFALL_REQUIRE_CPP: "1"
         run: python -m pytest -q
+      - name: Own-prices pipeline end to end on synthetic prices
+        run: |
+          python scripts/make_synthetic_prices.py --out "$RUNNER_TEMP/prices.csv" --effect TRV=-0.06
+          python scripts/run_own_prices.py --prices "$RUNNER_TEMP/prices.csv" \
+            --assets docs/own_prices_assets.csv --market SPX --label synthetic \
+            --out "$RUNNER_TEMP/own_prices" --placebo-sets 100
+          python -c "import pandas as pd, sys; f = pd.read_csv(sys.argv[1]).set_index('series'); assert f.loc['TRV', 'meets_criterion'], f" "$RUNNER_TEMP/own_prices/findings_event_study.csv"
+
+  readme:
+    name: README numbers match results/
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Check README numbers, generated tables and links
+        run: python scripts/check_readme_numbers.py
 
   cpp:
     name: C++ ${{ matrix.compiler }}, -Werror${{ matrix.sanitize == 'ON' && ', ASan and UBSan' || '' }}

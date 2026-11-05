@@ -186,6 +186,43 @@ def main() -> int:
             "Footprint Monte Carlo speed, 500 storms x 241 steps x 50 points, single thread, "
             "shared machine, indicative (synthetic inputs)", df)
 
+    own = R / "own_prices_synthetic"
+    if (own / "car_tests.csv").exists():
+        car = pd.read_csv(own / "car_tests.csv")
+        car = car[car.window == "post[0,+10]"].set_index("asset")
+        fnd = pd.read_csv(own / "findings_event_study.csv").set_index("series")
+        cov = pd.read_csv(own / "coverage.csv").set_index("asset")
+        rows = []
+        for a in car.index:
+            r = car.loc[a]
+            rows.append({"asset": a, "group": r["group"], "events used": int(cov.loc[a, "used"]),
+                         "mean CAR[0,+10], %": ci(100 * r["mean_car"], 100 * r["boot_lo"],
+                                                   100 * r["boot_hi"], ".2f"),
+                         "Holm p": f"{r['bmp_p_holm']:.3f}",
+                         "placebo p": f"{fnd.loc[a, 'placebo_p']:.3f}",
+                         "finding": "yes" if fnd.loc[a, "meets_criterion"] else "no"})
+        man = dict(ln.split(": ", 1) for ln in (own / "MANIFEST.txt").read_text().splitlines()
+                   if ": " in ln)
+        add("own_prices_synthetic",
+            f"scripts/run_own_prices.py on SYNTHETIC prices without any injected effect "
+            f"({len(rows)} series, {man['events_primary']} events, "
+            f"{man['placebo_sets']} placebo sets, {man['elapsed_seconds']} s; synthetic data)",
+            pd.DataFrame(rows))
+
+    ps = R / "placebo_size" / "summary.csv"
+    if ps.exists():
+        d = pd.read_csv(ps)
+        man = dict(ln.split(": ", 1) for ln in (R / "placebo_size" / "MANIFEST.txt").read_text()
+                   .splitlines() if ": " in ln)
+        d = d.assign(**{"rejection rate, % (MC SE)": [
+            f"{100 * r:.1f} ({100 * e:.1f})" for r, e in zip(d.rejection_rate, d.mc_se,
+                                                              strict=True)]})
+        add("placebo_size",
+            f"Size of the placebo test and of the BMP test on null synthetic prices "
+            f"({man['reps']} replications x {man['assets_per_rep']} assets, 39 events, "
+            f"{man['placebo_sets']} placebo sets; synthetic data)",
+            d[["test", "level", "tests", "rejection rate, % (MC SE)"]])
+
     mut = R / "mutation_check.txt"
     if mut.exists():
         lines = mut.read_text().splitlines()

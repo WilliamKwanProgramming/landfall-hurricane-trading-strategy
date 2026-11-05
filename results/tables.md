@@ -114,13 +114,46 @@
 | R1 calendar (not tradeable) | leave-one-season-out | 39 | -0.52 [-1.23, 0.08] | -0.261 | 0.024 | 0.246 (best (-5, 3)) |
 | R2 forecast trigger | leave-one-season-out | 152 | -0.35 [-0.63, -0.10] | -0.197 | 0.005 | 0.012 (best (0.2, 10)) |
 
-**Footprint Monte Carlo speed, C++ vs NumPy (synthetic inputs)**
+**Footprint Monte Carlo speed, 500 storms x 241 steps x 50 points, single thread, shared machine, indicative (synthetic inputs)**
 
-| engine | reps | median_s | min_s | max_s |
-|---|---|---|---|---|
-| numpy | 15 | 0.9902 | 0.7913 | 1.2585 |
-| cpp | 15 | 0.9398 | 0.8265 | 1.0902 |
-| ratio numpy/cpp | 15 | 1.1 | 0.7 | 1.5 |
+| measurement | engine | reps | median (s) | min (s) | max (s) | ns per wind evaluation |
+|---|---|---|---|---|---|---|
+| wave 1 | numpy | 15 | 0.9902 | 0.7913 | 1.2585 |  |
+| wave 1 | cpp (wave-1 kernel) | 15 | 0.9398 | 0.8265 | 1.0902 |  |
+| wave 1 | ratio numpy / cpp (wave-1) | 15 | 1.1 | 0.7 | 1.5 |  |
+| wave 2 | numpy | 15 | 1.072 | 0.822 | 1.279 | 178 |
+| wave 2 | cpp reference (wave-1 kernel) | 15 | 1.071 | 0.947 | 1.308 | 178 |
+| wave 2 | cpp optimised | 15 | 0.483 | 0.423 | 0.571 | 80 |
+| wave 2 | ratio numpy / cpp optimised | 15 | 2.2 | 1.4 | 3.0 |  |
+| wave 2 | ratio cpp reference / cpp optimised | 15 | 2.2 | 1.7 | 3.1 |  |
+| wave 2 | ratio numpy / cpp reference | 15 | 1.0 | 0.6 | 1.3 |  |
+
+**scripts/run_own_prices.py on SYNTHETIC prices without any injected effect (13 series, 39 events, 1000 placebo sets, 114 s; synthetic data)**
+
+| asset | group | events used | mean CAR[0,+10], % | Holm p | placebo p | finding |
+|---|---|---|---|---|---|---|
+| ALL | storm | 39 | -2.16 [-3.87, -0.72] | 0.333 | 0.028 | no |
+| TRV | storm | 39 | 0.52 [-1.10, 2.42] | 1.000 | 0.908 | no |
+| UVE | storm | 39 | -0.24 [-1.56, 1.00] | 1.000 | 0.824 | no |
+| HCI | storm | 15 | 0.21 [-2.36, 2.55] | 1.000 | 0.850 | no |
+| RNR | storm | 39 | -0.23 [-1.43, 0.99] | 1.000 | 0.858 | no |
+| EG | storm | 39 | 0.23 [-1.51, 1.96] | 1.000 | 0.958 | no |
+| OJ | storm | 39 | 0.74 [-0.40, 1.97] | 1.000 | 0.192 | no |
+| LUMBER | storm | 39 | 0.31 [-1.38, 1.94] | 1.000 | 0.132 | no |
+| NG | storm | 39 | -1.44 [-2.82, -0.00] | 1.000 | 0.002 | no |
+| MSFT | control | 39 | 1.10 [-0.66, 2.78] | 1.000 | 0.048 | no |
+| JNJ | control | 39 | 0.62 [-0.96, 2.13] | 1.000 | 0.672 | no |
+| MRK | control | 39 | 0.56 [-0.90, 1.84] | 1.000 | 0.410 | no |
+| PFE | control | 39 | -0.09 [-1.50, 1.56] | 1.000 | 0.856 | no |
+
+**Size of the placebo test and of the BMP test on null synthetic prices (60 replications x 4 assets, 39 events, 200 placebo sets; synthetic data)**
+
+| test | level | tests | rejection rate, % (MC SE) |
+|---|---|---|---|
+| placebo | 0.05 | 240 | 15.8 (2.4) |
+| placebo | 0.1 | 240 | 22.5 (2.7) |
+| bmp | 0.05 | 240 | 5.0 (1.4) |
+| bmp | 0.1 | 240 | 9.2 (1.9) |
 
 **Mutation check of the test suite (tests/mutation_check.py): 21 of 21 mutants caught.**
 

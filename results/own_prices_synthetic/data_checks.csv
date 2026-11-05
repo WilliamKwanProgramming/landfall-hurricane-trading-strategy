@@ -1,0 +1,15 @@
+data,series,role,first_date,last_date,prices,longest_gap_days,market_dates_missing,zero_return_share,largest_abs_return,warnings
+synthetic,ALL,asset,1989-01-02,2022-12-30,8774,4,96,0,0.1388,96 market dates without a price
+synthetic,TRV,asset,1989-01-02,2022-12-30,8769,5,101,0,0.1286,101 market dates without a price
+synthetic,UVE,asset,1989-01-02,2022-12-30,8785,4,85,0.0001,0.0856,85 market dates without a price
+synthetic,HCI,asset,2008-07-01,2022-12-30,3741,4,43,0,0.1426,43 market dates without a price
+synthetic,RNR,asset,1989-01-02,2022-12-30,8767,5,103,0,0.1188,103 market dates without a price
+synthetic,EG,asset,1989-01-02,2022-12-30,8780,4,90,0,0.1243,90 market dates without a price
+synthetic,OJ,asset,1989-01-02,2022-12-30,8783,4,87,0,0.1646,87 market dates without a price
+synthetic,LUMBER,asset,1989-01-02,2022-12-30,8781,4,89,0,0.1273,89 market dates without a price
+synthetic,NG,asset,1989-01-02,2022-12-30,8800,4,70,0,0.1345,70 market dates without a price
+synthetic,MSFT,asset,1989-01-02,2022-12-30,8771,4,99,0,0.1682,99 market dates without a price
+synthetic,JNJ,asset,1989-01-02,2022-12-30,8780,4,90,0,0.1452,90 market dates without a price
+synthetic,MRK,asset,1989-01-02,2022-12-30,8779,4,91,0,0.121,91 market dates without a price
+synthetic,PFE,asset,1989-01-02,2022-12-30,8771,5,99,0,0.3524,99 market dates without a price
+synthetic,SPX,market,1989-01-02,2022-12-30,8870,3,0,0,0.109,

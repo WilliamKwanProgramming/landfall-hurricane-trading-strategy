@@ -1,0 +1,15 @@
+data,series,bmp_p_holm,placebo_p,sign_as_hypothesised,meets_criterion
+synthetic,ALL,0.333417,0.028,True,False
+synthetic,TRV,1,0.908,False,False
+synthetic,UVE,1,0.824,True,False
+synthetic,HCI,1,0.85,False,False
+synthetic,RNR,1,0.858,True,False
+synthetic,EG,1,0.958,False,False
+synthetic,OJ,1,0.192,True,False
+synthetic,LUMBER,1,0.132,True,False
+synthetic,NG,1,0.002,,False
+synthetic,MSFT,1,0.048,,False
+synthetic,JNJ,1,0.672,,False
+synthetic,MRK,1,0.41,,False
+synthetic,PFE,1,0.856,,False
+synthetic,"storm (signed, pooled)",0.233995,0.042,,False

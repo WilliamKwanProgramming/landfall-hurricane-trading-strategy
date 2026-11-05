@@ -1,0 +1,2 @@
+data,rule,loso_mean_net,loso_boot_lo,dsr_best,meets_criterion
+synthetic,R2 forecast trigger,-0.000388776,-0.00301837,0.054972,False

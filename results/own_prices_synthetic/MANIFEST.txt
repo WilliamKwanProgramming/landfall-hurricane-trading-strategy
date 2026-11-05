@@ -1,0 +1,23 @@
+command: python scripts/run_own_prices.py --prices data/synthetic/own_prices_synthetic.csv --assets docs/own_prices_assets.csv --market SPX --label synthetic --out results/own_prices_synthetic --seed 20261105
+seed: 20261105
+git_commit: 6afe99059a121e1f6fd2d020a58cd7316b75fe85
+working_tree: modified code (uncommitted changes)
+date_utc: 2026-11-05T09:42:17Z
+python: 3.13.18
+numpy: 2.5.3
+machine: x86_64 Linux 6.18.44-fc-v236
+data: SYNTHETIC: prices supplied by the user (not stored here)
+protocol: docs/protocol_own_prices.md
+prices_file: own_prices_synthetic.csv
+prices_sha256: 5e12a202186b881ef235061abc3e04ce487a2eaa54f4f3b2ebfb91d57f3d7292
+assets_file: own_prices_assets.csv
+assets_sha256: b2e17fbf9e9b9fee04bb5263fd41fcf31e2d07d70b3060bde4a49ec490ead9cd
+market_column: SPX
+assets: ALL (storm, stock, sign -1), TRV (storm, stock, sign -1), UVE (storm, stock, sign -1), HCI (storm, stock, sign -1), RNR (storm, stock, sign -1), EG (storm, stock, sign -1), OJ (storm, future, sign +1), LUMBER (storm, future, sign +1), NG (storm, future, sign +0), MSFT (control, stock, sign +0), JNJ (control, stock, sign +0), MRK (control, stock, sign +0), PFE (control, stock, sign +0)
+columns_in_file_not_used: none
+events_primary: 39
+events_all: 48
+placebo_sets: 1000
+specifications: 1
+dsr_trials: 9
+elapsed_seconds: 114
