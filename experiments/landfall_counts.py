@@ -78,9 +78,16 @@ def main() -> int:
                    "storms_with_US_hurricane_landfall_geometric": len(b),
                    "both": len(a & b), "flag_only": len(a - b), "geometric_only": len(b - a)}
     pd.Series(storm_level).to_csv(out / "storm_level_agreement_1851_2019.csv", header=["count"])
-    pd.DataFrame({"storm_id": sorted(a ^ b),
-                  "in": ["flag" if s in a else "geometric" for s in sorted(a ^ b)]}).to_csv(
-        out / "storm_level_disagreements.csv", index=False)
+    # Each storm found by one definition only, with the facts the README quotes about them.
+    dis = []
+    for sid in sorted(a ^ b):
+        g = rda[rda.storm_id == sid]
+        lf = g[g.record == "L"]
+        dis.append({"storm_id": sid, "in": "flag" if sid in a else "geometric",
+                    "name": g["name"].iloc[0], "season": int(g["season"].iloc[0]),
+                    "landfall_flag_entries": len(lf),
+                    "max_vmax_at_landfall_flag_kt": lf["vmax_kt"].max() if len(lf) else np.nan})
+    pd.DataFrame(dis).to_csv(out / "storm_level_disagreements.csv", index=False)
 
     # ---- per-season counts and dispersion ------------------------------------------------------
     comb, _ = load_combined_tracks()
@@ -101,6 +108,11 @@ def main() -> int:
         disp.append(r)
     pd.DataFrame(disp)[["series", "n_seasons", "mean", "variance", "ratio", "D", "df",
                         "p_two_sided"]].to_csv(out / "dispersion.csv", index=False)
+    # US landfalls of any intensity from 1985 (the placebo exclusion list of the event studies;
+    # scripts/run_own_prices.py reads it instead of recomputing it from the tracks).
+    ev.us_landfalls(geo_comb)[["storm_id", "name", "season", "time", "lat", "lon",
+                               "vmax_kt"]].to_csv(
+        out / "us_landfalls_any_intensity_1985_2024.csv", index=False)
     # Event list used downstream (geometric definition, combined tracks, 1990-2022).
     sgc[sgc.season.between(1990, 2022)].to_csv(out / "us_hurricane_landfalls_1990_2022.csv",
                                                  index=False)
