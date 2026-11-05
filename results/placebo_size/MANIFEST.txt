@@ -1,8 +1,8 @@
 command: python experiments/placebo_size.py --seed 20261105
 seed: 20261105
-git_commit: 782cef07784bbcc0a6e78d0e617553bc5751b708
+git_commit: 0ef2657b8fb83f127d117f84e8547b57f9926362
 working_tree: clean code
-date_utc: 2026-11-05T10:52:41Z
+date_utc: 2026-11-05T14:14:55Z
 python: 3.13.18
 numpy: 2.5.3
 machine: x86_64 Linux 6.18.44-fc-v236

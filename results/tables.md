@@ -28,6 +28,15 @@
 | flag_only | 22 |
 | geometric_only | 16 |
 
+**Storms with a US hurricane landfall by the HURDAT2 flags but not by the geometric rule, 1990-2019: largest wind at a US landfall by each definition, kt (real data)**
+
+| storm | flag | geometric rule |
+|---|---|---|
+| Gaston 2004 | 65 | 57.8 |
+| Cindy 2005 | 65 | 56.2 |
+| Barry 2019 | 65 | 62.6 |
+| Dorian 2019 | 85 | no US landfall |
+
 **US hurricane-landfall storms per season: Poisson dispersion test (real data)**
 
 | series | n_seasons | mean | variance | ratio | D | df | p_two_sided |
@@ -68,7 +77,7 @@
 | garch_t_event_variance | 4.4 (0.5) | 37.3 (1.1) | 5.2 (0.5) | 5.2 (0.5) | 10.1 (0.7) | 95.6 (0.5) | 92.3 (0.6) |
 | garch_t_cross_correlation | 15.7 (0.8) | 18.4 (0.9) | 16.1 (0.8) | 4.8 (0.5) | 4.7 (0.5) | 84.4 (0.8) | 89.2 (0.7) |
 
-**Power under GARCH-t: rejection rate at 5%, % (bias with Monte Carlo SE), 2000 replications (synthetic data)**
+**Power under GARCH-t at a residual sd of 2% a day for every stock (30 x 4): rejection rate at 5%, % (bias with Monte Carlo SE), 2000 replications (synthetic data)**
 
 | design | delta | bias of mean CAR | naive_t | patell | bmp | bmp_kp | rank |
 |---|---|---|---|---|---|---|---|
@@ -76,10 +85,28 @@
 | 30 x 4 | 0.50% | -0.00010 (0.00014) | 12.6 | 16.6 | 12.0 | 12.0 | 15.1 |
 | 30 x 4 | 1.00% | +0.00030 (0.00014) | 40.6 | 46.2 | 40.5 | 40.6 | 52.6 |
 | 30 x 4 | 2.00% | -0.00012 (0.00014) | 88.9 | 93.7 | 89.6 | 89.5 | 98.0 |
+
+**Power under GARCH-t at a residual sd of 2% a day for every stock (35 x 1): rejection rate at 5%, % (bias with Monte Carlo SE), 2000 replications (synthetic data)**
+
+| design | delta | bias of mean CAR | naive_t | patell | bmp | bmp_kp | rank |
+|---|---|---|---|---|---|---|---|
 | 35 x 1 | 0.00% | +0.00007 (0.00026) | 4.7 | 7.5 | 4.7 | 4.7 | 4.3 |
 | 35 x 1 | 0.50% | +0.00034 (0.00026) | 7.5 | 10.8 | 7.4 | 7.4 | 8.4 |
 | 35 x 1 | 1.00% | -0.00001 (0.00026) | 14.6 | 19.7 | 15.6 | 15.6 | 19.4 |
 | 35 x 1 | 2.00% | +0.00012 (0.00025) | 43.1 | 51.0 | 44.0 | 44.0 | 59.0 |
+
+**Power of the per-stock BMP test at each stock's own event count and residual volatility: rejection rate at 5%, % (true CAR[0,+10] of 1%, 2%, 3%; size at 0), 2000 replications, Monte Carlo SE at most 1.1 points (synthetic returns calibrated to the real stocks)**
+
+| stock | group | events | residual sd, % a day (rms) | power at 1% | at 2% | at 3% | CAR detected with 80% power | size | t-test cross-check at 2% |
+|---|---|---|---|---|---|---|---|---|---|
+| HD | storm | 35 | 1.38 | 27.2 | 72.4 | 95.2 | 2.3% | 4.3 | 67 |
+| XOM | storm | 37 | 1.24 | 35.0 | 83.4 | 97.5 | 1.9% | 4.5 | 87 |
+| CVX | storm | 38 | 1.33 | 29.0 | 80.2 | 96.8 | 2.0% | 4.6 | 85 |
+| RRC | storm | 28 | 3.20 | 9.3 | 17.7 | 34.0 | 5.8% | 4.6 | 14 |
+| MSFT | control | 37 | 1.30 | 29.5 | 78.3 | 97.5 | 2.1% | 4.8 | 74 |
+| JNJ | control | 36 | 1.04 | 42.6 | 91.9 | 99.5 | 1.7% | 4.6 | 88 |
+| MRK | control | 35 | 1.47 | 24.6 | 68.3 | 92.1 | 2.5% | 5.1 | 44 |
+| PFE | control | 38 | 1.34 | 29.2 | 79.0 | 96.7 | 2.1% | 4.8 | 91 |
 
 **CAR[0,+10] around US hurricane landfalls 1990-2022, %, 95% stationary-bootstrap interval (real data)**
 
@@ -94,6 +121,56 @@
 | MRK | control | 35 | -0.28 [-2.40, 1.65] | -0.81 | 0.423 | 1.000 | 0.936 | 0.518 |
 | PFE | control | 38 | -0.42 [-1.49, 0.60] | -0.52 | 0.605 | 1.000 | 0.673 | 0.194 |
 
+**Sensitivity analyses of the CAR[0,+10] tests, no multiple-testing adjustment: all events kept (no overlap rule) and events from the HURDAT2 landfall flags, 1990-2019 (real data)**
+
+| sensitivity | stock | events | mean CAR[0,+10] | BMP p | Patell p | naive t p | rank p |
+|---|---|---|---|---|---|---|---|
+| all events kept | HD | 44 | 0.20 [-1.09, 1.51] | 0.907 | 0.899 | 0.764 | 0.832 |
+| all events kept | XOM | 46 | 0.91 [-0.20, 2.12] | 0.180 | 0.219 | 0.133 | 0.618 |
+| all events kept | CVX | 47 | 0.90 [-0.48, 2.40] | 0.182 | 0.185 | 0.168 | 0.268 |
+| all events kept | RRC | 36 | -0.87 [-4.57, 2.91] | 0.401 | 0.279 | 0.670 | 0.946 |
+| all events kept | MSFT | 45 | 0.25 [-0.92, 1.51] | 0.935 | 0.937 | 0.705 | 0.556 |
+| all events kept | JNJ | 45 | -0.22 [-1.18, 0.75] | 0.560 | 0.518 | 0.664 | 0.247 |
+| all events kept | MRK | 44 | -0.79 [-3.55, 1.43] | 0.272 | 0.049 | 0.494 | 0.947 |
+| all events kept | PFE | 47 | -0.48 [-1.58, 0.57] | 0.600 | 0.626 | 0.377 | 0.516 |
+| flag events 1990-2019 | HD | 32 | 0.05 [-1.51, 1.51] | 0.825 | 0.794 | 0.956 | 0.543 |
+| flag events 1990-2019 | XOM | 34 | -0.20 [-1.23, 0.90] | 0.787 | 0.801 | 0.730 | 0.522 |
+| flag events 1990-2019 | CVX | 35 | 0.06 [-1.09, 1.50] | 0.966 | 0.966 | 0.932 | 0.827 |
+| flag events 1990-2019 | RRC | 25 | -3.63 [-7.24, -0.25] | 0.103 | 0.018 | 0.122 | 0.114 |
+| flag events 1990-2019 | MSFT | 33 | 0.91 [-0.51, 2.43] | 0.280 | 0.278 | 0.259 | 0.312 |
+| flag events 1990-2019 | JNJ | 33 | 0.24 [-0.83, 1.41] | 0.840 | 0.806 | 0.704 | 0.477 |
+| flag events 1990-2019 | MRK | 32 | 0.27 [-1.23, 1.91] | 0.715 | 0.738 | 0.743 | 0.876 |
+| flag events 1990-2019 | PFE | 35 | -0.46 [-1.56, 0.68] | 0.517 | 0.539 | 0.458 | 0.785 |
+
+**The three events with the largest |CAR[0,+10]| of each stock, and the largest single-day abnormal return inside that window (event day in brackets), % (real data)**
+
+| stock | storm | day 0 | CAR[0,+10] | largest daily AR |
+|---|---|---|---|---|
+| HD | Georges 1998 | 1998-09-28 | -11.1 | -5.6 (day +3) |
+| HD | Gustav 2008 | 2008-09-02 | 10.4 | -5.3 (day +10) |
+| HD | Humberto 2007 | 2007-09-13 | -10.3 | -2.8 (day +6) |
+| XOM | Ian 2022 | 2022-09-28 | 12.4 | 3.9 (day +5) |
+| XOM | Georges 1998 | 1998-09-28 | 9.1 | 4.6 (day +1) |
+| XOM | Dolly 2008 | 2008-07-23 | -7.3 | -3.4 (day +6) |
+| CVX | Bonnie 1998 | 1998-08-27 | 13.9 | 4.4 (day +2) |
+| CVX | Ian 2022 | 2022-09-28 | 10.0 | 4.1 (day +3) |
+| CVX | Michael 2018 | 2018-10-10 | -6.4 | -2.7 (day +9) |
+| RRC | Georges 1998 | 1998-09-28 | -33.4 | -11.3 (day +8) |
+| RRC | Dolly 2008 | 2008-07-23 | -31.4 | -12.4 (day +8) |
+| RRC | Hanna 2020 | 2020-07-27 | 17.9 | -12.1 (day +0) |
+| MSFT | Bret 1999 | 1999-08-23 | 10.0 | 6.2 (day +1) |
+| MSFT | Danny 1997 | 1997-07-18 | -9.7 | -4.0 (day +0) |
+| MSFT | Erin 1995 | 1995-08-02 | 8.4 | 3.2 (day +5) |
+| JNJ | Andrew 1992 | 1992-08-24 | 8.4 | 4.2 (day +8) |
+| JNJ | Wilma 2005 | 2005-10-24 | -7.0 | -1.7 (day +7) |
+| JNJ | Nate 2017 | 2017-10-09 | 7.0 | 3.4 (day +6) |
+| MRK | Ivan 2004 | 2004-09-16 | -26.4 | -26.7 (day +10) |
+| MRK | Dolly 2008 | 2008-07-23 | 12.1 | 3.1 (day +1) |
+| MRK | Wilma 2005 | 2005-10-24 | 11.1 | 3.6 (day +8) |
+| PFE | Georges 1998 | 1998-09-28 | -10.1 | -5.4 (day +6) |
+| PFE | Dolly 2008 | 2008-07-23 | 7.9 | 3.7 (day +0) |
+| PFE | Bret 1999 | 1999-08-23 | 5.1 | 2.9 (day +5) |
+
 **Pooled tests, storm-relevant stocks signed by hypothesis (real data)**
 
 | group | window | n | mean CAR, % [95% CI] | bmp_t | bmp_p | rbar | bmp_kp_p | rank_p |
@@ -105,30 +182,32 @@
 | control | post[0,+10] | 146 | -0.07 [-0.89, 0.71] | -0.605 | 0.546 | 0.002 | 0.601 | 0.794 |
 | control | full[-5,+10] | 146 | -0.28 [-1.23, 0.67] | -0.927 | 0.356 | 0.002 | 0.424 | 0.664 |
 
-**Trading rules, net of costs, %, 95% stationary-bootstrap interval (real data)**
+**Trading rules, %, 95% stationary-bootstrap interval (real data); net of assumed costs, and gross of them for the same events**
 
-| rule | evaluation | events | mean net per event | Sharpe per event | PSR(0) | DSR of best of 9 |
-|---|---|---|---|---|---|---|
-| R1 calendar (not tradeable) | primary (-5, 10) | 39 | -0.21 [-0.90, 0.44] | -0.095 | 0.268 |  |
-| R2 forecast trigger | primary (0.4, 10) | 121 | -0.30 [-0.66, 0.06] | -0.155 | 0.034 |  |
-| R1 calendar (not tradeable) | leave-one-season-out | 39 | -0.52 [-1.23, 0.08] | -0.261 | 0.024 | 0.246 (best (-5, 3)) |
-| R2 forecast trigger | leave-one-season-out | 152 | -0.35 [-0.63, -0.10] | -0.197 | 0.005 | 0.012 (best (0.2, 10)) |
+| rule | evaluation | events | mean net per event | mean gross per event (before costs) | Sharpe per event | PSR(0) | DSR of best of 9 |
+|---|---|---|---|---|---|---|---|
+| R1 calendar (not tradeable) | primary (-5, 10) | 39 | -0.21 [-0.90, 0.44] | -0.01 [-0.70, 0.64] | -0.095 | 0.268 |  |
+| R2 forecast trigger | primary (0.4, 10) | 121 | -0.30 [-0.66, 0.06] | -0.10 [-0.46, 0.25] | -0.155 | 0.034 |  |
+| R1 calendar (not tradeable) | leave-one-season-out (cross-validated) | 39 | -0.52 [-1.23, 0.08] | -0.33 [-1.04, 0.27] | -0.261 | 0.024 | 0.246 (best (-5, 3)) |
+| R2 forecast trigger | leave-one-season-out (cross-validated) | 152 | -0.35 [-0.63, -0.10] | -0.15 [-0.43, 0.11] | -0.197 | 0.005 | 0.012 (best (0.2, 10)) |
+| R1 calendar (not tradeable) | forward-only (expanding window) | 39 | -0.37 [-1.11, 0.23] | -0.18 [-0.92, 0.42] | -0.174 | 0.108 |  |
+| R2 forecast trigger | forward-only (expanding window) | 134 | -0.36 [-0.62, -0.11] | -0.16 [-0.42, 0.09] | -0.217 | 0.004 |  |
 
 **Footprint Monte Carlo speed, 500 storms x 241 steps x 50 points, single thread, shared machine, indicative (synthetic inputs)**
 
 | measurement | engine | reps | median (s) | min (s) | max (s) | ns per wind evaluation |
 |---|---|---|---|---|---|---|
-| wave 1 | numpy | 15 | 0.9902 | 0.7913 | 1.2585 |  |
-| wave 1 | cpp (wave-1 kernel) | 15 | 0.9398 | 0.8265 | 1.0902 |  |
-| wave 1 | ratio numpy / cpp (wave-1) | 15 | 1.1 | 0.7 | 1.5 |  |
-| wave 2 | numpy | 15 | 1.116 | 0.879 | 1.720 | 185 |
-| wave 2 | cpp reference (wave-1 kernel) | 15 | 1.178 | 0.901 | 1.779 | 195 |
-| wave 2 | cpp optimised | 15 | 0.512 | 0.414 | 0.778 | 85 |
-| wave 2 | ratio numpy / cpp optimised | 15 | 2.2 | 1.1 | 4.2 |  |
-| wave 2 | ratio cpp reference / cpp optimised | 15 | 2.3 | 1.2 | 4.3 |  |
-| wave 2 | ratio numpy / cpp reference | 15 | 0.9 | 0.5 | 1.9 |  |
+| first run | numpy | 15 | 0.9902 | 0.7913 | 1.2585 |  |
+| first run | cpp (first kernel) | 15 | 0.9398 | 0.8265 | 1.0902 |  |
+| first run | ratio numpy / cpp (first kernel) | 15 | 1.1 | 0.7 | 1.5 |  |
+| second run | numpy | 15 | 1.093 | 0.831 | 1.369 | 181 |
+| second run | cpp reference (first kernel) | 15 | 1.054 | 0.896 | 1.212 | 175 |
+| second run | cpp optimised | 15 | 0.447 | 0.401 | 0.534 | 74 |
+| second run | ratio numpy / cpp optimised | 15 | 2.4 | 1.6 | 3.4 |  |
+| second run | ratio cpp reference / cpp optimised | 15 | 2.4 | 1.7 | 3.0 |  |
+| second run | ratio numpy / cpp reference | 15 | 1.0 | 0.7 | 1.5 |  |
 
-**scripts/run_own_prices.py on SYNTHETIC prices without any injected effect: simulated series that carry the template asset names, not market prices (13 series, 39 events, 1000 placebo sets, 36 s; synthetic data)**
+**scripts/run_own_prices.py on SYNTHETIC prices without any injected effect: simulated series that carry the template asset names, not market prices (13 series, 39 events, 1000 placebo sets, 204 s; synthetic data)**
 
 | asset | group | events used | mean CAR[0,+10], % | Holm p | placebo p | finding |
 |---|---|---|---|---|---|---|
@@ -146,6 +225,24 @@
 | MRK | control | 39 | 0.56 [-0.90, 1.84] | 1.000 | 0.410 | no |
 | PFE | control | 39 | -0.09 [-1.50, 1.56] | 1.000 | 0.856 | no |
 
+**Simulated power of the BMP test per asset at its own number of events and residual volatility (run of scripts/run_own_prices.py on SYNTHETIC prices; true CAR[0,+10] of 1%, 2%, 3%, rejection rate at 5%, %; 300 replications per cell; synthetic data)**
+
+| asset | group | events | residual sd, % a day (rms) | power at 1% | at 2% | at 3% | CAR detected with 80% power |
+|---|---|---|---|---|---|---|---|
+| ALL | storm | 39 | 1.48 | 22 | 66 | 96 | 2.5% |
+| TRV | storm | 39 | 1.48 | 26 | 72 | 95 | 2.3% |
+| UVE | storm | 39 | 1.46 | 27 | 73 | 95 | 2.3% |
+| HCI | storm | 15 | 1.48 | 15 | 38 | 65 | 3.8% |
+| RNR | storm | 39 | 1.46 | 27 | 76 | 95 | 2.2% |
+| EG | storm | 39 | 1.51 | 27 | 70 | 97 | 2.4% |
+| OJ | storm | 39 | 1.57 | 25 | 71 | 94 | 2.4% |
+| LUMBER | storm | 39 | 1.50 | 25 | 72 | 94 | 2.3% |
+| NG | storm | 39 | 1.50 | 23 | 71 | 94 | 2.4% |
+| MSFT | control | 39 | 1.49 | 28 | 73 | 96 | 2.3% |
+| JNJ | control | 39 | 1.46 | 25 | 74 | 96 | 2.3% |
+| MRK | control | 39 | 1.48 | 24 | 74 | 96 | 2.3% |
+| PFE | control | 39 | 1.57 | 22 | 66 | 90 | 2.6% |
+
 **Size of the placebo test and of the BMP test on null synthetic prices (60 replications x 4 assets, 39 events, 200 placebo sets; synthetic data)**
 
 | test | level | tests | rejection rate, % (MC SE) |
@@ -155,6 +252,6 @@
 | bmp | 0.05 | 240 | 5.0 (1.4) |
 | bmp | 0.1 | 240 | 9.2 (1.9) |
 
-**Mutation check of the test suite (tests/mutation_check.py): 31 of 31 mutants caught.**
+**Mutation check of the test suite (tests/mutation_check.py): 40 of 40 mutants caught.**
 
-M1 estimation window overlaps the event window (no 30-day gap); M2 off-by-one in the event-day index; M3 abnormal return with the wrong sign; M4 forecast features use the position 12/24 h after t instead of before; M5 training seasons include the test season; M6 residual variance with T - 1 instead of T - 2 degrees of freedom; M7 bootstrap block length ignored (always i.i.d.); M8 trading cost charged once instead of on entry and exit; M9 Sharpe annualised with k instead of sqrt(k); M10 deflated Sharpe ratio ignores the number of trials; M11 inland decay starts 6 h before landfall (NumPy); M12 Holland profile uses exponent 1/B instead of B; M13 Kolari-Pynnonen factor without the (N - 1) term; M14 rank test centred at L/2 instead of (L + 1)/2; M15 Holm replaced by Bonferroni; M16 forecast public at its synoptic time (availability delay ignored); M17 placebo dates not kept away from landfalls; M18 HURDAT2 west longitudes read as east; M19 translation asymmetry factor k(Rm) = 1 instead of 1/2 (NumPy); C1 C++ kernel: inland decay rate 0.95 / h instead of 0.095 / h; C2 C++ reference kernel: wind direction clockwise (southern-hemisphere rotation); P1 own-prices loader accepts a zero price; P2 own-prices loader accepts dates out of order; P3 own-prices alignment forward-fills missing prices instead of using common dates; P4 sign table reads '-' as a positive hypothesis; P5 placebo dates mapped to the next asset date after the drawn one (off by one); P6 two-sided assets pooled and traded as if signed; C3 optimised C++ kernel: sign error in the half-angle sine of the longitude difference; C4 optimised C++ kernel: sine and cosine of the bearing swapped; C5 optimised C++ kernel: cos(dl) = 1 - s^2 instead of 1 - 2 s^2 (half-angle identity); C6 optimised C++ kernel: per-point latitude sine taken from the half angle.
+M1 estimation window overlaps the event window (no 30-day gap); M2 off-by-one in the event-day index; M3 abnormal return with the wrong sign; M4 forecast features use the position 12/24 h after t instead of before; M5 training seasons include the test season; M6 residual variance with T - 1 instead of T - 2 degrees of freedom; M7 bootstrap block length ignored (always i.i.d.); M8 trading cost charged once instead of on entry and exit; M9 Sharpe annualised with k instead of sqrt(k); M10 deflated Sharpe ratio ignores the number of trials; M11 inland decay starts 6 h before landfall (NumPy); M12 Holland profile uses exponent 1/B instead of B; M13 Kolari-Pynnonen factor without the (N - 1) term; M14 rank test centred at L/2 instead of (L + 1)/2; M15 Holm replaced by Bonferroni; M16 forecast public at its synoptic time (availability delay ignored); M17 placebo dates not kept away from landfalls; M18 HURDAT2 west longitudes read as east; M19 translation asymmetry factor k(Rm) = 1 instead of 1/2 (NumPy); C1 C++ kernel: inland decay rate 0.95 / h instead of 0.095 / h; C2 C++ reference kernel: wind direction clockwise (southern-hemisphere rotation); P1 own-prices loader accepts a zero price; P2 own-prices loader accepts dates out of order; P3 own-prices alignment forward-fills missing prices instead of using common dates; P4 sign table reads '-' as a positive hypothesis; P5 placebo dates mapped to the next asset date after the drawn one (off by one); P6 two-sided assets pooled and traded as if signed; C3 optimised C++ kernel: sign error in the half-angle sine of the longitude difference; C4 optimised C++ kernel: sine and cosine of the bearing swapped; C5 optimised C++ kernel: cos(dl) = 1 - s^2 instead of 1 - 2 s^2 (half-angle identity); C6 optimised C++ kernel: per-point latitude sine taken from the half angle; R1 forward-only selection also looks at the season it trades; R2 gross-return statistics computed from the net return; R3 split check with zero tolerance (an adjusted split ratio is never matched); R4 simulator ignores the requested residual volatility; R5 power curve does not pass its residual volatility to the simulator; R6 plug-in t-test power uses n instead of n - 1 degrees of freedom for the critical value; R7 power by asset uses the mean instead of the root mean square residual sd; R8 power by asset gives every asset the same random stream; R9 largest events ranked by signed CAR (a large negative CAR is not found).

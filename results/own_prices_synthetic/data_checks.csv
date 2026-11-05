@@ -11,5 +11,5 @@ synthetic,NG,asset,1989-01-02,2022-12-30,8800,4,70,0,0.1345,70 market dates with
 synthetic,MSFT,asset,1989-01-02,2022-12-30,8771,4,99,0,0.1682,99 market dates without a price
 synthetic,JNJ,asset,1989-01-02,2022-12-30,8780,4,90,0,0.1452,90 market dates without a price
 synthetic,MRK,asset,1989-01-02,2022-12-30,8779,4,91,0,0.121,91 market dates without a price
-synthetic,PFE,asset,1989-01-02,2022-12-30,8771,5,99,0,0.3524,99 market dates without a price
+synthetic,PFE,asset,1989-01-02,2022-12-30,8771,5,99,0,0.3524,99 market dates without a price; possible unadjusted split: -35% on 2004-07-06
 synthetic,SPX,market,1989-01-02,2022-12-30,8870,3,0,0,0.109,

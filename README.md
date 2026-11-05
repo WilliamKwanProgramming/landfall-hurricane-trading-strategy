@@ -1,11 +1,12 @@
 # Landfall: hurricane forecasts, wind footprints and event studies
 [![CI](https://github.com/WilliamKwanProgramming/landfall-hurricane-trading-strategy/actions/workflows/ci.yml/badge.svg)](https://github.com/WilliamKwanProgramming/landfall-hurricane-trading-strategy/actions/workflows/ci.yml)
 
-Tools to test whether prices of hurricane-exposed securities reflect National Hurricane Center
-(NHC) information around US landfalls, and one pre-specified real-data test: four storm-relevant
-stocks and four controls around 39 US hurricane landfalls 1990-2022 show nothing (Holm-adjusted
-p-values of 1.0; a forecast-trigger trading rule loses money out of sample), in a design whose
-per-stock tests would detect a true 2% abnormal return only about 44% of the time.
+Tools to test whether prices of hurricane-exposed securities reflect National Hurricane Center (NHC)
+information around US landfalls, and one pre-specified real-data test: four storm-relevant stocks
+and four controls around 39 US hurricane landfalls 1990-2022 show nothing (every per-stock
+Holm-adjusted p-value is 1; a forecast-trigger trading rule loses money after assumed costs and not
+measurably before them), in a design whose per-stock tests would detect a true 2% abnormal return
+68-92% of the time for seven of the stocks and 18% for the eighth (RRC).
 
 **The project's central hypothesis is not tested here.** It concerns insurers, reinsurers and
 orange-juice, natural-gas and lumber futures, and operational NHC forecasts; none of those prices or
@@ -22,10 +23,10 @@ repository ([Run it on your own prices](#run-it-on-your-own-prices-not-done-in-t
 | Landfall definitions (HURDAT2 flags, geometric crossing) | yes | yes | yes | yes (1851-2022) |
 | Point-in-time statistical forecast (CLIPER-like) | yes | yes, incl. look-ahead guards | yes | yes (out of sample, 1990-2024) |
 | Wind footprint, NumPy reference | yes | hand calculations, limiting cases | yes | model output for real forecasts only; not validated against observed winds |
-| Wind footprint, C++ kernel (optimised and wave-1 reference) | yes | equal to NumPy within 1e-9; ASan/UBSan (GCC and Clang in CI) | yes (speed benchmark) | as above |
+| Wind footprint, C++ kernel (optimised and first-version reference) | yes | equal to NumPy within 1e-9; ASan/UBSan (GCC and Clang in CI) | yes (speed benchmark) | as above |
 | Exposure scores, two exposure maps | yes | yes, incl. look-ahead guard | yes | no (the maps are invented) |
 | Event-study tests (BMP, Patell, Kolari-Pynnonen, rank, bootstrap, placebo, Holm/BH) | yes | yes | yes (2,000 replications per cell) | yes (8 stocks, 1990-2022) |
-| Trading rules, PSR, deflated Sharpe ratio, leave-one-season-out | yes | yes | yes (own-prices pipeline) | yes (4 stocks, 1990-2022) |
+| Trading rules, PSR, deflated Sharpe ratio, leave-one-season-out and forward-only evaluation | yes | yes | yes (own-prices pipeline) | yes (4 stocks, 1990-2022) |
 | Loader for user price files, `run_own_prices.py`, protocol | yes | yes, end to end | yes | **not run**: no insurer, reinsurer or futures prices here |
 | Operational NHC forecasts (OFCL) in the study | reader only | fixture | no | **not run** |
 
@@ -38,10 +39,12 @@ errors, definitions by era, dispersion, mirror comparison): [results/tables.md](
 
 ### 1. Real-data event study: no finding, and what it could have found
 
-`docs/protocol.md` fixed the events (48 storms with a geometric US hurricane landfall, 1990-2022;
-39 after dropping overlapping windows), the stocks and their hypothesised signs, the windows, the
-tests and what counts as a finding; it was committed (ac55c07) before any event return was computed
-and before the results (2eeba12). The study was run once.
+`docs/protocol.md` fixed the events (48 storms with a geometric US hurricane landfall, 1990-2022; 39
+after dropping overlapping windows), the stocks and their hypothesised signs, the windows, the tests
+and what counts as a finding; it was committed (ac55c07) before any event return was computed and
+before the results (2eeba12). The study was run once; no pre-specified choice has changed. What was
+added afterwards (per-stock power, gross returns, the forward-only evaluation, facts about the event
+list) is listed under Deviations in the protocol.
 
 <!-- table:real_car -->
 **CAR[0,+10] around US hurricane landfalls 1990-2022, %, 95% stationary-bootstrap interval (real data)**
@@ -71,28 +74,43 @@ and before the results (2eeba12). The study was run once.
 | control | full[-5,+10] | 146 | -0.28 [-1.23, 0.67] | -0.927 | 0.356 | 0.002 | 0.424 | 0.664 |
 <!-- /table:real_pooled -->
 
-Reading: **no finding.** No stock has a significant CAR by any test, before or after the
-multiple-testing adjustment; the placebo distribution does not single out any stock; the signs of
-XOM, CVX and RRC are opposite to the hypotheses; the pooled signed CAR[0, +10] is -0.23% (placebo
-p = 0.96). **What the design could detect** (simulated GARCH-t returns, same tests, table below): with
-120 asset-events a true 11-day CAR of 1% is detected about 40% of the time and 2% about 90%; with the
-35 events of one stock, about 16% and about 44%. The per-stock nulls therefore exclude only
-effects of several percent; the intervals in the table show which.
+Reading: **no finding.** No stock has a significant CAR by any of the four per-stock tests, before
+or after the multiple-testing adjustment (the smallest raw p-value of any test is 0.14, of the BMP
+test 0.25); the placebo distribution does not single out any stock; the signs of XOM, CVX and RRC
+are opposite to the hypotheses; the pooled signed CAR[0, +10] is -0.23% (placebo p = 0.96). The two
+pre-specified sensitivity analyses (all 48 storms kept; storms flagged by HURDAT2) give three
+Patell p-values below 0.05 out of 192 (RRC with the flagged events, MRK with all events, twice) and
+none from the BMP, naive or rank tests; the Patell test over-rejects under event-induced variance
+(section 2), BMP is the pre-specified test, and RRC's sign is opposite to its hypothesis
+(`results/real_eventstudy/sensitivity_car_tests.csv`).
 
-<!-- table:synthetic_power -->
-**Power under GARCH-t: rejection rate at 5%, % (bias with Monte Carlo SE), 2000 replications (synthetic data)**
+**What the design could detect.** Simulated GARCH-t returns with each stock's own number of events
+and market-model residual volatility, same tests (per-stock table below): a true 11-day CAR of 2% is
+detected 68-92% of the time for seven stocks and 18% for RRC, whose residual volatility (3.2% a
+day) is more than twice the others' (1.0-1.5%); a true 1% is detected 25-43% of the time (RRC 9%),
+and the CAR detected with 80% power is 1.7-2.5% (RRC 5.8%). The last column is an analytic
+cross-check from each stock's realised CAR standard deviation; it is within 13 points of the
+simulation except for MRK (44% against 68%), whose standard deviation (6.4%) is the largest of the
+seven: three of its CARs are beyond 10% in size (-26% Ivan 2004, +12% Dolly 2008, +11% Wilma 2005;
+`results/real_eventstudy/largest_events.csv`). Pooling the four storm-relevant stocks (138
+asset-events; pooled design in [results/tables.md](results/tables.md), residual sd of 2% a day for
+every stock) a true 1% is detected about 40% of the time and 2% about 90%. The per-stock nulls
+therefore exclude only effects of a few percent; the intervals in the CAR table above show which.
 
-| design | delta | bias of mean CAR | naive_t | patell | bmp | bmp_kp | rank |
-|---|---|---|---|---|---|---|---|
-| 30 x 4 | 0.00% | -0.00007 (0.00014) | 5.0 | 8.2 | 5.1 | 5.1 | 4.7 |
-| 30 x 4 | 0.50% | -0.00010 (0.00014) | 12.6 | 16.6 | 12.0 | 12.0 | 15.1 |
-| 30 x 4 | 1.00% | +0.00030 (0.00014) | 40.6 | 46.2 | 40.5 | 40.6 | 52.6 |
-| 30 x 4 | 2.00% | -0.00012 (0.00014) | 88.9 | 93.7 | 89.6 | 89.5 | 98.0 |
-| 35 x 1 | 0.00% | +0.00007 (0.00026) | 4.7 | 7.5 | 4.7 | 4.7 | 4.3 |
-| 35 x 1 | 0.50% | +0.00034 (0.00026) | 7.5 | 10.8 | 7.4 | 7.4 | 8.4 |
-| 35 x 1 | 1.00% | -0.00001 (0.00026) | 14.6 | 19.7 | 15.6 | 15.6 | 19.4 |
-| 35 x 1 | 2.00% | +0.00012 (0.00025) | 43.1 | 51.0 | 44.0 | 44.0 | 59.0 |
-<!-- /table:synthetic_power -->
+<!-- table:per_stock_power -->
+**Power of the per-stock BMP test at each stock's own event count and residual volatility: rejection rate at 5%, % (true CAR[0,+10] of 1%, 2%, 3%; size at 0), 2000 replications, Monte Carlo SE at most 1.1 points (synthetic returns calibrated to the real stocks)**
+
+| stock | group | events | residual sd, % a day (rms) | power at 1% | at 2% | at 3% | CAR detected with 80% power | size | t-test cross-check at 2% |
+|---|---|---|---|---|---|---|---|---|---|
+| HD | storm | 35 | 1.38 | 27.2 | 72.4 | 95.2 | 2.3% | 4.3 | 67 |
+| XOM | storm | 37 | 1.24 | 35.0 | 83.4 | 97.5 | 1.9% | 4.5 | 87 |
+| CVX | storm | 38 | 1.33 | 29.0 | 80.2 | 96.8 | 2.0% | 4.6 | 85 |
+| RRC | storm | 28 | 3.20 | 9.3 | 17.7 | 34.0 | 5.8% | 4.6 | 14 |
+| MSFT | control | 37 | 1.30 | 29.5 | 78.3 | 97.5 | 2.1% | 4.8 | 74 |
+| JNJ | control | 36 | 1.04 | 42.6 | 91.9 | 99.5 | 1.7% | 4.6 | 88 |
+| MRK | control | 35 | 1.47 | 24.6 | 68.3 | 92.1 | 2.5% | 5.1 | 44 |
+| PFE | control | 38 | 1.34 | 29.2 | 79.0 | 96.7 | 2.1% | 4.8 | 91 |
+<!-- /table:per_stock_power -->
 
 ![Mean CAR by event day](docs/img/car_paths.png)
 
@@ -106,28 +124,37 @@ test; it is descriptive (the bands are pointwise) and says nothing about insurer
 landfall) and the real value. It does not show per-stock placebo results (in the table above).*
 
 <!-- table:trading -->
-**Trading rules, net of costs, %, 95% stationary-bootstrap interval (real data)**
+**Trading rules, %, 95% stationary-bootstrap interval (real data); net of assumed costs, and gross of them for the same events**
 
-| rule | evaluation | events | mean net per event | Sharpe per event | PSR(0) | DSR of best of 9 |
-|---|---|---|---|---|---|---|
-| R1 calendar (not tradeable) | primary (-5, 10) | 39 | -0.21 [-0.90, 0.44] | -0.095 | 0.268 |  |
-| R2 forecast trigger | primary (0.4, 10) | 121 | -0.30 [-0.66, 0.06] | -0.155 | 0.034 |  |
-| R1 calendar (not tradeable) | leave-one-season-out | 39 | -0.52 [-1.23, 0.08] | -0.261 | 0.024 | 0.246 (best (-5, 3)) |
-| R2 forecast trigger | leave-one-season-out | 152 | -0.35 [-0.63, -0.10] | -0.197 | 0.005 | 0.012 (best (0.2, 10)) |
+| rule | evaluation | events | mean net per event | mean gross per event (before costs) | Sharpe per event | PSR(0) | DSR of best of 9 |
+|---|---|---|---|---|---|---|---|
+| R1 calendar (not tradeable) | primary (-5, 10) | 39 | -0.21 [-0.90, 0.44] | -0.01 [-0.70, 0.64] | -0.095 | 0.268 |  |
+| R2 forecast trigger | primary (0.4, 10) | 121 | -0.30 [-0.66, 0.06] | -0.10 [-0.46, 0.25] | -0.155 | 0.034 |  |
+| R1 calendar (not tradeable) | leave-one-season-out (cross-validated) | 39 | -0.52 [-1.23, 0.08] | -0.33 [-1.04, 0.27] | -0.261 | 0.024 | 0.246 (best (-5, 3)) |
+| R2 forecast trigger | leave-one-season-out (cross-validated) | 152 | -0.35 [-0.63, -0.10] | -0.15 [-0.43, 0.11] | -0.197 | 0.005 | 0.012 (best (0.2, 10)) |
+| R1 calendar (not tradeable) | forward-only (expanding window) | 39 | -0.37 [-1.11, 0.23] | -0.18 [-0.92, 0.42] | -0.174 | 0.108 |  |
+| R2 forecast trigger | forward-only (expanding window) | 134 | -0.36 [-0.62, -0.11] | -0.16 [-0.42, 0.09] | -0.217 | 0.004 |  |
 <!-- /table:trading -->
 
-Reading: **negative result.** The tradeable forecast-trigger rule R2 loses money after costs; in
-leave-one-season-out evaluation its mean net return per event is -0.35% [-0.63, -0.10], and the
-deflated Sharpe ratio of 0.01 for the best of its 9 configurations is far from the 0.95 the protocol
-requires. The calendar rule R1 uses the realised landfall date, could not have been traded, and is
-not better. Costs are assumptions (10 bp per side, 2 bp on the index hedge, 50 bp a year borrow);
-doubling them makes both rules worse (`results/real_eventstudy/sensitivity_costs.csv`).
+Reading: **negative result, and the loss is the assumed costs.** The tradeable forecast-trigger
+rule R2 has a mean net return per event of -0.35% [-0.63, -0.10] in leave-one-season-out
+evaluation (each season's configuration is chosen on all other seasons, later ones included, so
+this is cross-validation) and -0.36% [-0.62, -0.11] when each season's configuration is chosen on
+earlier seasons only (forward-only, 134 events). Before costs the same events give -0.15% [-0.43,
+0.11] and -0.16% [-0.42, 0.09], which cannot be told from zero: the difference of about 0.2% per
+event is the assumed costs. The deflated Sharpe ratio of 0.01 for the best of R2's 9
+configurations is far from the 0.95 the protocol requires. The calendar rule R1 uses the realised
+landfall date, could not have been traded, and is not better (-0.52% net, -0.33% before costs,
+leave-one-season-out). Costs are assumptions (10 bp per side, 2 bp on the index hedge, 50 bp a
+year borrow); doubling them makes both rules worse
+(`results/real_eventstudy/sensitivity_costs.csv`).
 
 ![Trading rules by configuration](docs/img/trading_rules.png)
 
 *Mean net return per event and 95% bootstrap interval for each of the 9 configurations of each rule
 (primary in blue) and the leave-one-season-out evaluation (orange; real prices). It does not show
-the time path of returns or any configuration outside the pre-specified grid.*
+gross returns, the forward-only evaluation, the time path of returns or any configuration outside
+the pre-specified grid.*
 
 ### 2. Event-study statistics on simulated returns (synthetic data)
 
@@ -139,7 +166,8 @@ Kolari-Pynnonen adjustment and the rank test stay near 5%. Not shown: a wrong ma
 ![Size and power of the tests](docs/img/size_power.png)
 
 *Top: rejection rate of a true null at 5% by test and scenario, with 95% Monte Carlo error bars
-(orange: above 7.5%). Bottom: power of the BMP test by true CAR for the two designs. Synthetic data;
+(orange: above 7.5%). Bottom: power of the BMP test by true CAR for the two designs at a residual sd
+of 2% a day for every stock (the per-stock table in section 1 uses each stock's own). Synthetic data;
 it does not show the real data's correlation or variance structure.*
 
 <!-- table:placebo_size -->
@@ -191,10 +219,13 @@ At hurricane strength on the US coast the two definitions find almost the same n
 (333 flagged, 336 geometric, 1851-2019); the geometric rule finds more overall because it counts
 small islands and re-entries. The "L" flags are incomplete: 12 of the 16 storms found only by the
 geometric rule are 1966-1980 US hurricane landfalls with no landfall entry at all in the rda mirror
-(among them Celia 1970, Carmen 1974, Eloise 1975, David and Frederic 1979, Allen 1980), and 14 of
-the 22 found only by the flags are flagged at 65 kt while the synoptic fixes the geometric rule
-interpolates are below 64 kt (`results/landfall_counts/storm_level_disagreements.csv`). Whether the
-1966-1980 gap is in HURDAT2 or only in the mirror was not checked.
+(among them Celia 1970, Carmen 1974, Eloise 1975, David and Frederic 1979, Allen 1980). Of the 22
+found only by the flags, 21 have a geometric US crossing whose interpolated wind is below 64 kt (14
+of them are flagged at 65 kt) and the 22nd is Dorian 2019, flagged at 85 kt but with no geometric
+US crossing at all (`results/landfall_counts/storm_level_disagreements.csv`). The study's event
+list uses the geometric rule, so Dorian 2019 is not an event, nor are Barry 2019, Cindy 2005 and
+Gaston 2004 (flagged at 65 kt, 56-63 kt interpolated); the flag-defined sensitivity analysis
+includes them. Whether the 1966-1980 gap is in HURDAT2 or only in the mirror was not checked.
 
 ![US hurricane-landfall storms by definition](docs/img/landfall_counts.png)
 
@@ -212,39 +243,41 @@ within a storm.*
 invented exposure map. It does not show NHC's forecast, which was much better than this model's.*
 
 The kernel evaluates a Holland profile with motion asymmetry and inland decay at every (sampled
-storm, half-hour step, point). The first (wave-1) C++ kernel was about as fast as NumPy (ratio of
-medians 1.1). An instruction profile (callgrind, `experiments/profile_kernel.py`,
-`results/benchmark/callgrind.csv`) shows why: 1,044 instructions per evaluation, 41% of them in sine
-and cosine and 15% in `hypot`, nearly all in about fifteen scalar libm calls per evaluation, which
-NumPy makes as well, so the compiled loop had little to gain. The optimised kernel computes the
-point terms once per point and the storm terms once per (storm, step), gets the trigonometry of the
-differences from half-angle identities and replaces `hypot` by `sqrt` where overflow cannot occur:
-376 instructions per evaluation remain, 34% of them in `pow`. Results equal NumPy within 1e-9
-relative (tests on random, polar, date-line and near-centre inputs; on the benchmark inputs the
-largest relative difference is 2.94e-14).
+storm, half-hour step, point). The first C++ kernel was about as fast as NumPy (ratio of medians 1.1
+in the first run, 1.0 in the second). An instruction profile (callgrind,
+`experiments/profile_kernel.py`, `results/benchmark/callgrind.csv`) shows why: 1,044 instructions
+per evaluation, 41% of them in sine and cosine and 15% in `hypot`, nearly all in about fifteen
+scalar libm calls per evaluation, which NumPy makes as well, so the compiled loop had little to
+gain. The optimised kernel computes the point terms once per point and the storm terms once per
+(storm, step), gets the trigonometry of the differences from half-angle identities and replaces
+`hypot` by `sqrt` where overflow cannot occur: 376 instructions per evaluation remain, 34% of them
+in `pow`. Results equal NumPy within 1e-9 relative (tests on random, polar, date-line and
+near-centre inputs; on the benchmark inputs the largest relative difference is 2.94e-14).
 
 <!-- table:benchmark -->
 **Footprint Monte Carlo speed, 500 storms x 241 steps x 50 points, single thread, shared machine, indicative (synthetic inputs)**
 
 | measurement | engine | reps | median (s) | min (s) | max (s) | ns per wind evaluation |
 |---|---|---|---|---|---|---|
-| wave 1 | numpy | 15 | 0.9902 | 0.7913 | 1.2585 |  |
-| wave 1 | cpp (wave-1 kernel) | 15 | 0.9398 | 0.8265 | 1.0902 |  |
-| wave 1 | ratio numpy / cpp (wave-1) | 15 | 1.1 | 0.7 | 1.5 |  |
-| wave 2 | numpy | 15 | 1.116 | 0.879 | 1.720 | 185 |
-| wave 2 | cpp reference (wave-1 kernel) | 15 | 1.178 | 0.901 | 1.779 | 195 |
-| wave 2 | cpp optimised | 15 | 0.512 | 0.414 | 0.778 | 85 |
-| wave 2 | ratio numpy / cpp optimised | 15 | 2.2 | 1.1 | 4.2 |  |
-| wave 2 | ratio cpp reference / cpp optimised | 15 | 2.3 | 1.2 | 4.3 |  |
-| wave 2 | ratio numpy / cpp reference | 15 | 0.9 | 0.5 | 1.9 |  |
+| first run | numpy | 15 | 0.9902 | 0.7913 | 1.2585 |  |
+| first run | cpp (first kernel) | 15 | 0.9398 | 0.8265 | 1.0902 |  |
+| first run | ratio numpy / cpp (first kernel) | 15 | 1.1 | 0.7 | 1.5 |  |
+| second run | numpy | 15 | 1.093 | 0.831 | 1.369 | 181 |
+| second run | cpp reference (first kernel) | 15 | 1.054 | 0.896 | 1.212 | 175 |
+| second run | cpp optimised | 15 | 0.447 | 0.401 | 0.534 | 74 |
+| second run | ratio numpy / cpp optimised | 15 | 2.4 | 1.6 | 3.4 |  |
+| second run | ratio cpp reference / cpp optimised | 15 | 2.4 | 1.7 | 3.0 |  |
+| second run | ratio numpy / cpp reference | 15 | 1.0 | 0.7 | 1.5 |  |
 <!-- /table:benchmark -->
 
-Reading: the optimised kernel is **2.2 times faster than NumPy** (ratio of medians; range over runs
-1.1 to 4.2) and than the wave-1 kernel, which again ran at about NumPy's speed (ratio 0.9). The
-timing is indicative: it ran inside `reproduce.sh` at nice 10 on a shared 2-core machine whose
-1-minute load average rose from 1.57 to 2.18, all engines single-threaded and interleaved. What
-limits it: the remaining `pow`, `exp` and `asin` calls are scalar glibc calls; vectorising them
-would need `-ffast-math` or a vector math library, not used so that results stay reproducible.
+Reading: the optimised kernel is **2.4 times faster than NumPy** and than the first kernel (ratios of
+medians over 15 interleaved repetitions; the fastest NumPy run over the slowest optimised run is 1.6,
+the slowest over the fastest 3.4). The first kernel again ran at about NumPy's speed (ratio 1.0). The
+timing is indicative: it ran inside `reproduce.sh` at nice 19 on a shared 2-core machine whose
+1-minute load average was 1.00 before and after (one single-threaded process of this repository was
+running), all engines single-threaded and interleaved. What limits it: the remaining `pow`, `exp` and
+`asin` calls are scalar glibc calls; vectorising them would need `-ffast-math` or a vector math
+library, not used so that results stay reproducible.
 
 ### 6. Data checks and the test suite
 
@@ -252,9 +285,9 @@ Every fix of the dplyr mirror matches a fix of the rda mirror (`results/data_che
 repairs and reports defects of the rda mirror. The official NHC file could not be downloaded here.
 
 <!-- table:mutation -->
-**Mutation check of the test suite (tests/mutation_check.py): 31 of 31 mutants caught.**
+**Mutation check of the test suite (tests/mutation_check.py): 40 of 40 mutants caught.**
 
-M1 estimation window overlaps the event window (no 30-day gap); M2 off-by-one in the event-day index; M3 abnormal return with the wrong sign; M4 forecast features use the position 12/24 h after t instead of before; M5 training seasons include the test season; M6 residual variance with T - 1 instead of T - 2 degrees of freedom; M7 bootstrap block length ignored (always i.i.d.); M8 trading cost charged once instead of on entry and exit; M9 Sharpe annualised with k instead of sqrt(k); M10 deflated Sharpe ratio ignores the number of trials; M11 inland decay starts 6 h before landfall (NumPy); M12 Holland profile uses exponent 1/B instead of B; M13 Kolari-Pynnonen factor without the (N - 1) term; M14 rank test centred at L/2 instead of (L + 1)/2; M15 Holm replaced by Bonferroni; M16 forecast public at its synoptic time (availability delay ignored); M17 placebo dates not kept away from landfalls; M18 HURDAT2 west longitudes read as east; M19 translation asymmetry factor k(Rm) = 1 instead of 1/2 (NumPy); C1 C++ kernel: inland decay rate 0.95 / h instead of 0.095 / h; C2 C++ reference kernel: wind direction clockwise (southern-hemisphere rotation); P1 own-prices loader accepts a zero price; P2 own-prices loader accepts dates out of order; P3 own-prices alignment forward-fills missing prices instead of using common dates; P4 sign table reads '-' as a positive hypothesis; P5 placebo dates mapped to the next asset date after the drawn one (off by one); P6 two-sided assets pooled and traded as if signed; C3 optimised C++ kernel: sign error in the half-angle sine of the longitude difference; C4 optimised C++ kernel: sine and cosine of the bearing swapped; C5 optimised C++ kernel: cos(dl) = 1 - s^2 instead of 1 - 2 s^2 (half-angle identity); C6 optimised C++ kernel: per-point latitude sine taken from the half angle.
+M1 estimation window overlaps the event window (no 30-day gap); M2 off-by-one in the event-day index; M3 abnormal return with the wrong sign; M4 forecast features use the position 12/24 h after t instead of before; M5 training seasons include the test season; M6 residual variance with T - 1 instead of T - 2 degrees of freedom; M7 bootstrap block length ignored (always i.i.d.); M8 trading cost charged once instead of on entry and exit; M9 Sharpe annualised with k instead of sqrt(k); M10 deflated Sharpe ratio ignores the number of trials; M11 inland decay starts 6 h before landfall (NumPy); M12 Holland profile uses exponent 1/B instead of B; M13 Kolari-Pynnonen factor without the (N - 1) term; M14 rank test centred at L/2 instead of (L + 1)/2; M15 Holm replaced by Bonferroni; M16 forecast public at its synoptic time (availability delay ignored); M17 placebo dates not kept away from landfalls; M18 HURDAT2 west longitudes read as east; M19 translation asymmetry factor k(Rm) = 1 instead of 1/2 (NumPy); C1 C++ kernel: inland decay rate 0.95 / h instead of 0.095 / h; C2 C++ reference kernel: wind direction clockwise (southern-hemisphere rotation); P1 own-prices loader accepts a zero price; P2 own-prices loader accepts dates out of order; P3 own-prices alignment forward-fills missing prices instead of using common dates; P4 sign table reads '-' as a positive hypothesis; P5 placebo dates mapped to the next asset date after the drawn one (off by one); P6 two-sided assets pooled and traded as if signed; C3 optimised C++ kernel: sign error in the half-angle sine of the longitude difference; C4 optimised C++ kernel: sine and cosine of the bearing swapped; C5 optimised C++ kernel: cos(dl) = 1 - s^2 instead of 1 - 2 s^2 (half-angle identity); C6 optimised C++ kernel: per-point latitude sine taken from the half angle; R1 forward-only selection also looks at the season it trades; R2 gross-return statistics computed from the net return; R3 split check with zero tolerance (an adjusted split ratio is never matched); R4 simulator ignores the requested residual volatility; R5 power curve does not pass its residual volatility to the simulator; R6 plug-in t-test power uses n instead of n - 1 degrees of freedom for the critical value; R7 power by asset uses the mean instead of the root mean square residual sd; R8 power by asset gives every asset the same random stream; R9 largest events ranked by signed CAR (a large negative CAR is not found).
 <!-- /table:mutation -->
 
 ## Run it on your own prices (not done in this repository)
@@ -281,44 +314,28 @@ rules.
    `--specifications K` counts every asset list or setting you have run, discarded runs included;
    the deflated Sharpe ratio then uses N = 9 K trials.
 4. Read `results/own_prices/`: `data_checks.csv` (gaps, stale series, jumps: look first),
-   `coverage.csv` (events per asset), `car_tests.csv` and `pooled.csv` (CARs and tests, with Holm
-   and BH p-values), `placebo.csv`, `findings_event_study.csv` (the protocol's criteria),
-   `trading_*.csv` and `findings_trading.csv` (R1, R2, deflated Sharpe ratio), `sensitivity_*.csv`,
-   and `MANIFEST.txt` (SHA-256 of the price file and of `assets.csv`, never the prices).
-   A finding needs a Holm-adjusted p < 0.05, a placebo p < 0.05 and the hypothesised sign; anything
-   else is "no evidence", to be reported with the bootstrap interval and the power above; a small
+   `coverage.csv` (events per asset), `power_by_asset.csv` (power of each asset's test at its own
+   events and volatility: read it before interpreting a null), `car_tests.csv` and `pooled.csv`
+   (CARs and tests, with Holm and BH p-values), `placebo.csv`, `findings_event_study.csv` (the
+   protocol's criteria), `trading_*.csv` and `findings_trading.csv` (R1, R2, deflated Sharpe ratio),
+   `sensitivity_*.csv`, and `MANIFEST.txt` (SHA-256 of the price file and of `assets.csv`, never the
+   prices). A finding needs a Holm-adjusted p < 0.05, a placebo p < 0.05 and the hypothesised sign;
+   anything else is "no evidence", to be reported with the bootstrap interval and the power; a small
    placebo p-value on its own is weak evidence (section 2).
 
-Here it was run only on synthetic prices without any effect (`scripts/make_synthetic_prices.py`):
-no finding, but three of the 13 placebo p-values are below 0.05 (see section 2). `tests/test_own_prices.py` checks that
-it finds an injected -6% effect on two insurers and nothing else.
-
-<!-- table:own_prices_synthetic -->
-**scripts/run_own_prices.py on SYNTHETIC prices without any injected effect: simulated series that carry the template asset names, not market prices (13 series, 39 events, 1000 placebo sets, 36 s; synthetic data)**
-
-| asset | group | events used | mean CAR[0,+10], % | Holm p | placebo p | finding |
-|---|---|---|---|---|---|---|
-| ALL | storm | 39 | -2.16 [-3.87, -0.72] | 0.333 | 0.028 | no |
-| TRV | storm | 39 | 0.52 [-1.10, 2.42] | 1.000 | 0.908 | no |
-| UVE | storm | 39 | -0.24 [-1.56, 1.00] | 1.000 | 0.824 | no |
-| HCI | storm | 15 | 0.21 [-2.36, 2.55] | 1.000 | 0.850 | no |
-| RNR | storm | 39 | -0.23 [-1.43, 0.99] | 1.000 | 0.858 | no |
-| EG | storm | 39 | 0.23 [-1.51, 1.96] | 1.000 | 0.958 | no |
-| OJ | storm | 39 | 0.74 [-0.40, 1.97] | 1.000 | 0.192 | no |
-| LUMBER | storm | 39 | 0.31 [-1.38, 1.94] | 1.000 | 0.132 | no |
-| NG | storm | 39 | -1.44 [-2.82, -0.00] | 1.000 | 0.002 | no |
-| MSFT | control | 39 | 1.10 [-0.66, 2.78] | 1.000 | 0.048 | no |
-| JNJ | control | 39 | 0.62 [-0.96, 2.13] | 1.000 | 0.672 | no |
-| MRK | control | 39 | 0.56 [-0.90, 1.84] | 1.000 | 0.410 | no |
-| PFE | control | 39 | -0.09 [-1.50, 1.56] | 1.000 | 0.856 | no |
-<!-- /table:own_prices_synthetic -->
+Here it was run only on synthetic prices without any effect (`scripts/make_synthetic_prices.py`;
+tables `own_prices_synthetic` and `own_prices_power` in [results/tables.md](results/tables.md)): no
+finding, but four of the 14 placebo p-values (13 assets and the pooled storm group) are below 0.05
+(see section 2). `tests/test_own_prices.py` checks that it finds an injected -6% effect on two
+insurers and nothing else.
 
 ## Reproduce
 
 ```bash
 python -m pip install -e ".[test,prices]"   # Python >= 3.12
 python scripts/fetch_data.py                 # HURDAT2 mirrors into data/raw/, SHA-256 checked
-cmake -S . -B build -G Ninja && cmake --build build && ctest --test-dir build
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPython3_EXECUTABLE="$(which python)" \
+  && cmake --build build && ctest --test-dir build   # needs cmake, ninja, a C++17 compiler
 python -m pytest -q                          # data tests skip if data/raw/ is empty
 bash scripts/reproduce.sh                    # every result, table and figure (results/MANIFEST.txt)
 bash scripts/reproduce.sh --mutation         # also the mutation check
@@ -331,27 +348,8 @@ the Clang sanitizer build runs in CI only). NHC file: `python scripts/fetch_data
 
 ## Method
 
-**Tracks and landfalls.** HURDAT2 mirrors. Geometric landfall: 10-minute interpolation, first step
-on land (1/120-degree mask) after at least 1 h at sea, inside a stated US polygon.
-
-**Forecast.** For each synoptic fix t, ridge regressions (lambda = 1) fitted on seasons 1950 to
-season(t) - 1 predict displacement and intensity change at 12-120 h from position, intensity,
-recent motion, day of year and quadratic terms; joint in-sample residual vectors give sampled
-tracks; the share entering US land within 120 h is the landfall probability.
-
-**Footprint.** Holland (1980) profile $V(r) = V_m\sqrt{(R_m/r)^B e^{1-(R_m/r)^B}}$, $B$ from the
-pressure deficit (clipped to [1, 2.5]), $R_m$ from Willoughby et al. (2006) or the 34-kt radii,
-motion asymmetry after Phadke et al. (2003), inland decay $V(t) = V_b + (R V_0 - V_b)e^{-\alpha t}$
-(Kaplan and DeMaria 1995). Exposure: expected Emanuel (2011) damage fraction over weighted points.
-
-**Event study.** Market model on days -280..-31, abnormal returns on -5..+10,
-$\mathrm{Var}(CAR) = s^2[D + D^2/T + (\sum_w (R_{mt}-\bar R_m))^2/S_{xx}]$; BMP
-$t = \overline{SCAR}/(s_{SCAR}/\sqrt N)$, Kolari-Pynnonen factor $\sqrt{(1-\bar r)/(1+(N-1)\bar r)}$,
-Corrado-Cowan ranks, stationary bootstrap, placebo dates, Holm and Benjamini-Hochberg. Trading:
-market-hedged, equal ex-ante residual risk, costs per side; PSR and DSR with
-$SR_0 = \sqrt{V}[(1-\gamma)\Phi^{-1}(1-1/N) + \gamma\Phi^{-1}(1-1/(Ne))]$ (reproduces the worked
-example of Bailey and Lopez de Prado 2014). User-supplied series: each asset on the dates on which
-it and the index both have a close.
+Formulas and settings: [docs/method.md](docs/method.md). The choices fixed before the real data were
+touched: [docs/protocol.md](docs/protocol.md).
 
 ## Limitations
 
@@ -364,7 +362,8 @@ it and the index both have a close.
   as inputs and in-sample residuals from storms lasting 120 h, which understates uncertainty.
 - skfolio prices: split-adjusted, dividend adjustment of the stocks not verified independently; the
   S&P 500 series is a price index (no dividends). RRC has stale prices before 1996 (screened).
-- Per-stock tests have about 35 events and low power (about 16% for a 1% CAR).
+- Per-stock tests have 28-38 events and detect a true CAR of 2% 68-92% of the time (RRC 18%): the
+  nulls exclude effects of a few percent, not smaller ones (section 1).
 - Footprint: no Coriolis or inflow angle, a fixed surface factor, constant $R_m$ and $B$ along a
   sampled track, decay that continues after a return to sea; not validated against observed
   winds. The exposure maps are invented.
@@ -372,7 +371,8 @@ it and the index both have a close.
   incomplete.
 - The bootstrap under-covers slightly; the rank test over-rejects under event-induced variance;
   the placebo test over-rejects (section 2).
-- Trading costs are assumptions; no market impact. Kernel timings come from a shared machine.
+- Trading costs are assumptions (R2 loses money only after them); no market impact. Kernel
+  timings come from a shared machine.
 
 ## References
 
