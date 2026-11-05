@@ -1,0 +1,14 @@
+command: python experiments/benchmark_footprint.py --reps 15
+seed: 20261105
+git_commit: fde66f159083e3438678ecf10f1548bd9288fb8e
+working_tree: clean code
+date_utc: 2026-11-05T08:59:46Z
+python: 3.13.18
+numpy: 2.5.3
+machine: x86_64 Linux 6.18.44-fc-v236
+inputs: synthetic: 500 storms x 241 steps x 50 points
+threads: 1 (both)
+load1_before: 1.42
+load1_after: 1.62
+max_relative_difference_cpp_vs_numpy: 8.40e-16
+cpu_count: 2

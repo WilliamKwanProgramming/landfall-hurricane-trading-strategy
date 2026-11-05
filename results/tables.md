@@ -114,6 +114,14 @@
 | R1 calendar (not tradeable) | leave-one-season-out | 39 | -0.52 [-1.23, 0.08] | -0.261 | 0.024 | 0.246 (best (-5, 3)) |
 | R2 forecast trigger | leave-one-season-out | 152 | -0.35 [-0.63, -0.10] | -0.197 | 0.005 | 0.012 (best (0.2, 10)) |
 
+**Footprint Monte Carlo speed, C++ vs NumPy (synthetic inputs)**
+
+| engine | reps | median_s | min_s | max_s |
+|---|---|---|---|---|
+| numpy | 15 | 0.9902 | 0.7913 | 1.2585 |
+| cpp | 15 | 0.9398 | 0.8265 | 1.0902 |
+| ratio numpy/cpp | 15 | 1.1 | 0.7 | 1.5 |
+
 **Mutation check of the test suite (tests/mutation_check.py): 21 of 21 mutants caught.**
 
 M1 estimation window overlaps the event window (no 30-day gap); M2 off-by-one in the event-day index; M3 abnormal return with the wrong sign; M4 forecast features use the position 12/24 h after t instead of before; M5 training seasons include the test season; M6 residual variance with T - 1 instead of T - 2 degrees of freedom; M7 bootstrap block length ignored (always i.i.d.); M8 trading cost charged once instead of on entry and exit; M9 Sharpe annualised with k instead of sqrt(k); M10 deflated Sharpe ratio ignores the number of trials; M11 inland decay starts 6 h before landfall (NumPy); M12 Holland profile uses exponent 1/B instead of B; M13 Kolari-Pynnonen factor without the (N - 1) term; M14 rank test centred at L/2 instead of (L + 1)/2; M15 Holm replaced by Bonferroni; M16 forecast public at its synoptic time (availability delay ignored); M17 placebo dates not kept away from landfalls; M18 HURDAT2 west longitudes read as east; M19 translation asymmetry factor k(Rm) = 1 instead of 1/2 (NumPy); C1 C++ kernel: inland decay rate 0.95 / h instead of 0.095 / h; C2 C++ kernel: wind direction clockwise (southern-hemisphere rotation).

@@ -244,7 +244,25 @@ borrow); doubling them (`results/real_eventstudy/sensitivity_costs.csv`) makes b
 
 ### Footprint kernel and test-suite checks
 
+The C++ kernel reproduces the NumPy reference (maximum relative difference in the table's manifest,
+`results/benchmark/MANIFEST.txt`). It is **not meaningfully faster** in this first version: on 500
+synthetic storms over 241 time steps and 50 points the two engines take about the same time, and the
+ratio of medians is close to 1 with a range that includes values below 1. The timing is indicative
+only. It was taken on a shared 2-core machine with another single-threaded job running on the second
+core (the 1-minute load average before and after is in the manifest), and each engine ran single-threaded.
+A likely reason, which has not been profiled, is that the kernel evaluates about fifteen trigonometric
+and exponential functions per (storm, time step, point) without hoisting the terms that depend only on
+the storm position or only on the point, and the NumPy version spends its time in the same functions.
+Profiling and hoisting those terms is the next step for the kernel.
+
 <!-- table:benchmark -->
+**Footprint Monte Carlo speed, C++ vs NumPy (synthetic inputs)**
+
+| engine | reps | median_s | min_s | max_s |
+|---|---|---|---|---|
+| numpy | 15 | 0.9902 | 0.7913 | 1.2585 |
+| cpp | 15 | 0.9398 | 0.8265 | 1.0902 |
+| ratio numpy/cpp | 15 | 1.1 | 0.7 | 1.5 |
 <!-- /table:benchmark -->
 
 <!-- table:mutation -->

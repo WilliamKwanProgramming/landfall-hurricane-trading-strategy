@@ -1,0 +1,4 @@
+engine,reps,median_s,min_s,max_s
+numpy,15,0.9902,0.7913,1.2585
+cpp,15,0.9398,0.8265,1.0902
+ratio numpy/cpp,15,1.1,0.7,1.5
