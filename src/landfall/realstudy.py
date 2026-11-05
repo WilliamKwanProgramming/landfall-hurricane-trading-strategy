@@ -104,6 +104,8 @@ def placebo_day0(event_times: pd.Series, landfall_times: pd.Series, dates: pd.Da
     all_years = np.arange(years[0], years[1] + 1)
     out = np.full((n_sets, len(ev)), -1, dtype=np.int64)
     excl = np.timedelta64(exclusion_days, "D")
+    # Closes of the calendar computed once; the row of a candidate is what es.event_rows gives.
+    closes = (pd.DatetimeIndex(dates).normalize() + pd.Timedelta(hours=20)).to_numpy()
     for j, t in enumerate(ev):
         week = t.isocalendar().week
         for s in range(n_sets):
@@ -119,8 +121,9 @@ def placebo_day0(event_times: pd.Series, landfall_times: pd.Series, dates: pd.Da
                 near = (k < len(lf) and lf[k] - c64 <= excl) or (k > 0 and c64 - lf[k - 1] <= excl)
                 if near:
                     continue
-                row = int(es.event_rows(dates, [cand + pd.Timedelta(hours=12)])[0])
-                if row >= 0 and window_fits(row, len(dates)):
+                row = int(np.searchsorted(closes, np.datetime64(cand + pd.Timedelta(hours=12)),
+                                          side="left"))
+                if row < len(closes) and window_fits(row, len(dates)):
                     out[s, j] = row
                     break
             else:
