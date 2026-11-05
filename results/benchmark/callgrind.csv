@@ -1,0 +1,3 @@
+kernel,evaluations,instructions_per_evaluation,share_sin and cos,share_hypot,share_pow,share_exp,share_asin,share_kernel code (incl. inlined),share_other
+reference,241000,1044,0.408,0.153,0.123,0.054,0.025,0.211,0.035
+optimised,241000,376,0.022,0.003,0.341,0.149,0.069,0.384,0.056

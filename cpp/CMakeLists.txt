@@ -40,3 +40,7 @@ else()
   set_target_properties(landfall_cpp PROPERTIES LIBRARY_OUTPUT_DIRECTORY
     "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
+
+# Driver for the instruction-count profile of both kernels (experiments/profile_kernel.py).
+add_executable(profile_driver bench/profile_driver.cpp)
+target_link_libraries(profile_driver PRIVATE landfall_footprint)
