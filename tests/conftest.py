@@ -8,8 +8,9 @@ HERE = pathlib.Path(__file__).resolve().parent
 REPO = HERE.parent
 FIXTURES = HERE / "fixtures"
 
-# The C++ extension is built by CMake into build/cpp (see cpp/CMakeLists.txt).
-for p in (os.environ.get("LANDFALL_CPP_DIR", ""), str(REPO / "build" / "cpp")):
+# The C++ extension is built by CMake into build/cpp (see cpp/CMakeLists.txt); a directory in
+# LANDFALL_CPP_DIR takes precedence (inserted last, so it ends up first on sys.path).
+for p in (str(REPO / "build" / "cpp"), os.environ.get("LANDFALL_CPP_DIR", "")):
     if p and p not in sys.path and pathlib.Path(p).is_dir():
         sys.path.insert(0, p)
 
