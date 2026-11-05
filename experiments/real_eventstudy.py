@@ -72,8 +72,12 @@ def main() -> int:
     # Primary event study.
     prim = events[keep].reset_index(drop=True)
     datas = asset_data(ret, mkt)
-    per_asset, pooled, _, _ = pl.event_study(datas, prim["time"], args.seed)
+    per_asset, pooled, fits, _ = pl.event_study(datas, prim["time"], args.seed)
     per_asset.to_csv(out / "car_tests_primary.csv", index=False, float_format="%.6g")
+    # Added after an independent review of the first run (docs/protocol.md, Deviations): the
+    # three largest CAR[0, +10] of each stock, to show how far single events drive a mean.
+    pl.largest_events(fits, prim).to_csv(out / "largest_events.csv", index=False,
+                                         float_format="%.6g")
     pooled.to_csv(out / "pooled_primary.csv", index=False, float_format="%.6g")
 
     # Placebo.

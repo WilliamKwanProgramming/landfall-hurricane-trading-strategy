@@ -8,9 +8,13 @@ probabilities are read from results/ (committed outputs of the eight-stock study
 hurricane tracks only). Writes CSV files and a MANIFEST with the SHA-256 of both inputs to --out;
 no price is written. Every output row carries the --label ("real" or "synthetic").
 
+Also writes power_by_asset.csv: the simulated power of the BMP test for each asset at its own
+number of events and residual volatility (`--power-reps 0` skips it), to be quoted with the result.
+
 Usage:
   python scripts/run_own_prices.py --prices PATH --assets assets.csv --market SPX --label real \
-      [--out results/own_prices] [--specifications 1] [--seed 20261105] [--placebo-sets 1000]
+      [--out results/own_prices] [--specifications 1] [--seed 20261105] [--placebo-sets 1000] \
+      [--power-reps 300]
 """
 
 from __future__ import annotations
@@ -55,6 +59,9 @@ def main(argv: list[str] | None = None) -> int:
                          "N = 9 x this)")
     ap.add_argument("--seed", type=int, default=20261105)
     ap.add_argument("--placebo-sets", type=int, default=1000)
+    ap.add_argument("--power-reps", type=int, default=300,
+                    help="simulated panels per asset and true CAR for power_by_asset.csv "
+                         "(0: skip)")
     args = ap.parse_args(argv)
     if args.specifications < 1:
         ap.error("--specifications must be >= 1")
@@ -91,10 +98,13 @@ def main(argv: list[str] | None = None) -> int:
         df.to_csv(out / name, index=False, float_format="%.6g")
 
     save(checks, "data_checks.csv")
-    per_asset, pooled, _, cov = pl.event_study(datas, prim["time"], args.seed)
+    per_asset, pooled, fits, cov = pl.event_study(datas, prim["time"], args.seed)
     save(cov, "coverage.csv")
     save(per_asset, "car_tests.csv")
     save(pooled, "pooled.csv")
+    if args.power_reps > 0:
+        _, power = pl.power_by_asset(fits, pl.POWER_DELTAS, args.power_reps, [args.seed, 6])
+        save(power, "power_by_asset.csv")
     plc, plc_signed = pl.placebo(datas, calendar, prim["time"], excl["time"],
                                  (SEASONS[0] + 1, SEASONS[1]), args.placebo_sets, args.seed)
     prow = pl.placebo_table(per_asset, pooled, plc, plc_signed)
@@ -143,7 +153,8 @@ def main(argv: list[str] | None = None) -> int:
                             for a in assets),
         "columns_in_file_not_used": ", ".join(unused) or "none",
         "events_primary": len(prim), "events_all": len(events),
-        "placebo_sets": args.placebo_sets, "specifications": args.specifications,
+        "placebo_sets": args.placebo_sets, "power_reps": args.power_reps,
+        "specifications": args.specifications,
         "dsr_trials": 9 * args.specifications,
         "elapsed_seconds": f"{elapsed:.0f}"})
     find = pd.read_csv(out / "findings_event_study.csv")

@@ -1,9 +1,12 @@
 """Power of the per-asset tests: grid interpolation, the t-test cross-check, the simulation."""
 
+from types import SimpleNamespace
+
 import numpy as np
 import pandas as pd
 import pytest
 
+from landfall import pipeline as pl
 from landfall.study import eventstudy as es
 from landfall.study import power as pw
 from landfall.study import simulate as sim
@@ -119,3 +122,53 @@ def test_no_bootstrap_is_drawn_when_n_boot_is_zero():
     assert all(np.isnan(r["boot_cover"]) for r in rows)
     rows = sim.replicate(sc, 10, 1, 0.0, np.random.default_rng(14), n_reps=2, n_boot=25)
     assert all(r["boot_cover"] in (True, False) for r in rows)
+
+
+# ---- power at each asset's own events and volatility ----------------------------------------
+
+
+def _fit(sigmas, group="storm"):
+    """The two things power_by_asset reads from a fit: the residual sds and the asset group."""
+    return SimpleNamespace(mm=SimpleNamespace(sigma=np.asarray(sigmas, dtype=float)),
+                           data=SimpleNamespace(asset=SimpleNamespace(group=group)))
+
+
+GRID = (0.0, 0.01, 0.02, 0.03, 0.06)
+
+
+def test_power_by_asset_uses_the_event_count_and_the_rms_residual_sd():
+    fits = {"A": _fit([0.01] * 10 + [0.03] * 10)}
+    curves, summary = pl.power_by_asset(fits, GRID, 20, [3])
+    assert summary["events"].tolist() == [20]
+    assert summary["resid_sd_rms"].iloc[0] == pytest.approx(np.sqrt(5e-4))  # not the mean 0.02
+    assert summary["group"].tolist() == ["storm"]
+    assert curves["delta"].tolist() == list(GRID) and (curves["events"] == 20).all()
+
+
+def test_power_by_asset_skips_assets_without_a_fit_but_counts_their_position():
+    fits = {"A": _fit([0.012] * 25), "B": None, "C": _fit([0.02] * 30, "control")}
+    got: list[dict] = []
+    curves, summary = pl.power_by_asset(fits, GRID, 20, [3], got.append)
+    assert summary["asset"].tolist() == ["A", "C"] and [g["asset"] for g in got] == ["A", "C"]
+    # C is asset number 2: its random key is [3, 2] whatever B is.
+    direct = pw.power_curve(30, 0.02, GRID, 20, [3, 2])
+    c = summary.set_index("asset").loc["C"]
+    assert c["size_bmp"] == direct["reject_bmp"][0]
+    assert c["power_bmp_1pct"] == direct["reject_bmp"][1]
+    assert c["power_bmp_2pct"] == direct["reject_bmp"][2]
+    assert c["power_bmp_3pct"] == direct["reject_bmp"][3]
+    np.testing.assert_array_equal(curves[curves["asset"] == "C"]["reject_bmp"],
+                                  direct["reject_bmp"])
+
+
+def test_power_by_asset_needs_the_reporting_points_on_the_grid():
+    with pytest.raises(ValueError, match="0.03"):
+        pl.power_by_asset({"A": _fit([0.01] * 20)}, (0.0, 0.01, 0.02, 0.05), 5, [1])
+
+
+def test_power_by_asset_finds_the_80_percent_point_between_grid_points():
+    # Residual sd 1%, 35 events: 80% power at a true CAR of about 1.7%, between 1% and 2%.
+    _, summary = pl.power_by_asset({"A": _fit([0.01] * 35)}, GRID, 200, [8])
+    d80 = summary["delta_80pct_power_bmp"].iloc[0]
+    assert 0.010 < d80 < 0.025
+    assert summary["power_bmp_3pct"].iloc[0] > 0.95 > 0.5 > summary["size_bmp"].iloc[0]

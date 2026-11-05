@@ -78,15 +78,22 @@ def main() -> int:
                    "storms_with_US_hurricane_landfall_geometric": len(b),
                    "both": len(a & b), "flag_only": len(a - b), "geometric_only": len(b - a)}
     pd.Series(storm_level).to_csv(out / "storm_level_agreement_1851_2019.csv", header=["count"])
-    # Each storm found by one definition only, with the facts the README quotes about them.
+    # Each storm found by one definition only, with the facts the README quotes about them. The
+    # last two columns are the largest wind at a landfall inside the US polygon, at any intensity,
+    # by each definition: below 64 kt where one rule finds a US landfall that is too weak (the
+    # flag says 65 kt, the interpolated track less), empty where it finds none at all.
     dis = []
     for sid in sorted(a ^ b):
         g = rda[rda.storm_id == sid]
         lf = g[g.record == "L"]
+        in_us = {k: u[u.storm_id == sid]["vmax_kt"] for k, u in (("flag", fu), ("geo", gu))}
         dis.append({"storm_id": sid, "in": "flag" if sid in a else "geometric",
                     "name": g["name"].iloc[0], "season": int(g["season"].iloc[0]),
                     "landfall_flag_entries": len(lf),
-                    "max_vmax_at_landfall_flag_kt": lf["vmax_kt"].max() if len(lf) else np.nan})
+                    "max_vmax_at_landfall_flag_kt": lf["vmax_kt"].max() if len(lf) else np.nan,
+                    "us_flag_max_vmax_kt": in_us["flag"].max() if len(in_us["flag"]) else np.nan,
+                    "us_geometric_max_vmax_kt": (in_us["geo"].max() if len(in_us["geo"])
+                                                 else np.nan)})
     pd.DataFrame(dis).to_csv(out / "storm_level_disagreements.csv", index=False)
 
     # ---- per-season counts and dispersion ------------------------------------------------------

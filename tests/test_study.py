@@ -302,3 +302,30 @@ def test_event_table_and_metrics_carry_the_gross_return():
     assert m["mean_gross"] == pytest.approx(evt["gross"].mean(), rel=1e-12)
     assert m["mean_gross"] - m["mean_net"] == pytest.approx(0.002, rel=1e-9)
     assert m["gross_lo"] <= m["mean_gross"] <= m["gross_hi"]
+
+
+def test_largest_events_names_the_event_and_the_day_that_drive_a_car():
+    from types import SimpleNamespace
+
+    rng = np.random.default_rng(20)
+    n = 6
+    est_m = rng.normal(0, 0.01, (n, 250))
+    est_r = 0.8 * est_m + rng.normal(0, 0.01, (n, 250))
+    win_m = rng.normal(0, 0.01, (n, 16))
+    win_r = 0.8 * win_m + rng.normal(0, 0.01, (n, 16))
+    win_r[4, 5 + 7] -= 0.20  # fit row 4, event day +7 (the window starts at day -5)
+    win_r[1, 5 + 2] += 0.08
+    mm = es.fit_market_model(est_r, est_m, win_r, win_m)
+    to_table = np.array([5, 3, 1, 0, 2, 4])  # fit row -> row of the events table
+    table = pd.DataFrame({"name": list("ABCDEF"), "season": 2000 + np.arange(n),
+                          "day0_date": pd.date_range("2000-01-03", periods=n, freq="30D").date})
+    out = pl.largest_events({"X": SimpleNamespace(mm=mm, events=to_table), "Y": None}, table, n=2)
+    assert list(out["asset"]) == ["X", "X"]  # an asset without a fit is skipped
+    first, second = out.iloc[0], out.iloc[1]
+    assert (first["storm"], first["season"], first["largest_daily_ar_day"]) == ("C", 2002, 7)
+    assert first["day0_date"] == table["day0_date"][2]
+    assert first["car_0_10"] == pytest.approx(mm.car(0, 10)[4])
+    assert first["car_0_10"] < -0.15
+    assert first["largest_daily_ar"] == pytest.approx(mm.ar[4, 5 + 7])
+    assert second["storm"] == "D"  # fit row 1 maps to table row 3
+    assert abs(first["car_0_10"]) >= abs(second["car_0_10"])

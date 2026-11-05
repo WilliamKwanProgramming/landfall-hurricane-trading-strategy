@@ -148,6 +148,14 @@ MUTANTS = [
         (PW, "n_boot=0, sigma_e=sigma)", "n_boot=0)")]),
     ("R6 plug-in t-test power uses n instead of n - 1 degrees of freedom for the critical value", [
         (PW, "tc = stats.t.ppf(0.975, n - 1)", "tc = stats.t.ppf(0.975, n)")]),
+    ("R7 power by asset uses the mean instead of the root mean square residual sd", [
+        (PL, "float(np.sqrt(np.mean(fit.mm.sigma ** 2)))", "float(np.mean(fit.mm.sigma))")]),
+    ("R8 power by asset gives every asset the same random stream", [
+        (PL, "pw.power_curve(n, sigma, grid, reps, [*rng_key, i])",
+         "pw.power_curve(n, sigma, grid, reps, [*rng_key, 0])")]),
+    ("R9 largest events ranked by signed CAR (a large negative CAR is not found)", [
+        (PL, 'np.argsort(-np.abs(car), kind="stable")[:n]',
+         'np.argsort(-car, kind="stable")[:n]')]),
 ]
 
 

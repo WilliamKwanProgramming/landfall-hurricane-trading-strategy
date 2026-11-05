@@ -82,6 +82,17 @@ def main() -> int:
     s.columns = ["quantity", "storms"]
     add("storm_level",
         "Storms with a US hurricane landfall, 1851-2019, by definition (real data)", s)
+    dis = pd.read_csv(R / "landfall_counts" / "storm_level_disagreements.csv")
+    dis = dis[(dis["in"] == "flag") & (dis["season"] >= 1990)]
+    add("flag_only_since_1990",
+        "Storms with a US hurricane landfall by the HURDAT2 flags but not by the geometric rule, "
+        "1990-2019: largest wind at a US landfall by each definition, kt (real data)",
+        pd.DataFrame([{"storm": f"{z['name'].title()} {z['season']}",
+                       "flag": f"{z['us_flag_max_vmax_kt']:.0f}",
+                       "geometric rule": (f"{z['us_geometric_max_vmax_kt']:.1f}"
+                                          if pd.notna(z["us_geometric_max_vmax_kt"])
+                                          else "no US landfall")}
+                      for _, z in dis.sort_values("season").iterrows()]))
     disp = pd.read_csv(R / "landfall_counts" / "dispersion.csv").round(3)
     add("dispersion",
         "US hurricane-landfall storms per season: Poisson dispersion test (real data)", disp)
@@ -175,6 +186,15 @@ def main() -> int:
         "Sensitivity analyses of the CAR[0,+10] tests, no multiple-testing adjustment: all "
         "events kept (no overlap rule) and events from the HURDAT2 landfall flags, 1990-2019 "
         "(real data)", pd.DataFrame(rows))
+    big = pd.read_csv(R / "real_eventstudy" / "largest_events.csv")
+    add("largest_events",
+        "The three events with the largest |CAR[0,+10]| of each stock, and the largest single-day "
+        "abnormal return inside that window (event day in brackets), % (real data)",
+        pd.DataFrame([{"stock": z["asset"], "storm": f"{z['storm'].title()} {z['season']}",
+                       "day 0": z["day0_date"], "CAR[0,+10]": f"{100 * z['car_0_10']:.1f}",
+                       "largest daily AR": (f"{100 * z['largest_daily_ar']:.1f} "
+                                            f"(day {int(z['largest_daily_ar_day']):+d})")}
+                      for _, z in big.iterrows()]))
     p = pd.read_csv(R / "real_eventstudy" / "pooled_primary.csv")
     p = p.assign(mean_car=lambda x: [ci(100 * m, 100 * lo, 100 * hi, ".2f") for m, lo, hi in
                                      zip(x["mean_car"], x["boot_lo"], x["boot_hi"],
@@ -249,6 +269,25 @@ def main() -> int:
             f"({len(rows)} series, {man['events_primary']} events, "
             f"{man['placebo_sets']} placebo sets, {man['elapsed_seconds']} s; synthetic data)",
             pd.DataFrame(rows))
+
+    if (own / "power_by_asset.csv").exists():
+        pw = pd.read_csv(own / "power_by_asset.csv")
+        reps = dict(ln.split(": ", 1) for ln in (own / "MANIFEST.txt").read_text().splitlines()
+                    if ": " in ln)["power_reps"]
+        add("own_prices_power",
+            "Simulated power of the BMP test per asset at its own number of events and residual "
+            "volatility (run of scripts/run_own_prices.py on SYNTHETIC prices; true CAR[0,+10] of "
+            f"1%, 2%, 3%, rejection rate at 5%, %; {reps} replications per cell; synthetic data)",
+            pd.DataFrame([{
+                "asset": z["asset"], "group": z["group"], "events": int(z["events"]),
+                "residual sd, % a day (rms)": f"{100 * z['resid_sd_rms']:.2f}",
+                "power at 1%": f"{100 * z['power_bmp_1pct']:.0f}",
+                "at 2%": f"{100 * z['power_bmp_2pct']:.0f}",
+                "at 3%": f"{100 * z['power_bmp_3pct']:.0f}",
+                "CAR detected with 80% power": (f"{100 * z['delta_80pct_power_bmp']:.1f}%"
+                                                if pd.notna(z["delta_80pct_power_bmp"])
+                                                else "above 10%")}
+                for _, z in pw.iterrows()]))
 
     ps = R / "placebo_size" / "summary.csv"
     if ps.exists():

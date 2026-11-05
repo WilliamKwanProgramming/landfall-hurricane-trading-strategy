@@ -38,10 +38,9 @@ from real_eventstudy import asset_data
 from landfall import pipeline as pl
 from landfall.data.prices import load_skfolio_prices, simple_returns
 from landfall.provenance import results_dir, write_manifest
-from landfall.study.power import interpolate_target, plugin_t_power, power_curve
+from landfall.study.power import plugin_t_power
 
 DELTAS = (0.0, 0.005, 0.01, 0.015, 0.02, 0.03, 0.04, 0.05, 0.06)
-POWER_TARGET = 0.8
 
 
 def main() -> int:
@@ -58,34 +57,30 @@ def main() -> int:
     datas = asset_data(ret, mkt)
     fits, _ = pl.fit_assets(datas, prim["time"])
 
-    long_rows, summary = [], []
-    for i, d in enumerate(datas):
-        name = d.asset.name
-        f = fits[name]
-        n, sd = len(f.events), f.mm.sigma
-        sigma = float(np.sqrt(np.mean(sd ** 2)))
-        car = f.mm.car(0, 10)
+    def progress(row: dict) -> None:
+        print(f"{row['asset']}: n={row['events']} sd(rms)={100 * row['resid_sd_rms']:.2f}% "
+              f"size={row['size_bmp']:.3f} power 1/2/3% = {row['power_bmp_1pct']:.3f}/"
+              f"{row['power_bmp_2pct']:.3f}/{row['power_bmp_3pct']:.3f}", flush=True)
+
+    curves, base = pl.power_by_asset(fits, DELTAS, args.reps, [args.seed, 5], progress)
+    long_rows = curves.rename(columns={"asset": "stock"})
+    summary = []
+    for b in base.to_dict("records"):
+        f = fits[b["asset"]]
+        n, sd, car = b["events"], f.mm.sigma, f.mm.car(0, 10)
         se_real = float(car.std(ddof=1) / np.sqrt(n))
-        curve = power_curve(n, sigma, DELTAS, args.reps, [args.seed, 5, i])
-        for crow in curve.to_dict("records"):
-            long_rows.append({"stock": name, "group": d.asset.group, "events": n,
-                              "resid_sd_rms": sigma, **crow})
-        power = curve["reject_bmp"].to_numpy()
-        pick = {f"power_bmp_{int(round(100 * x))}pct": float(power[DELTAS.index(x)])
-                for x in (0.01, 0.02, 0.03)}
         summary.append({
-            "stock": name, "group": d.asset.group, "events": n,
-            "resid_sd_rms": sigma, "resid_sd_median": float(np.median(sd)),
+            "stock": b["asset"], "group": b["group"], "events": n,
+            "resid_sd_rms": b["resid_sd_rms"], "resid_sd_median": float(np.median(sd)),
             "resid_sd_min": float(sd.min()), "resid_sd_max": float(sd.max()),
-            "real_car_sd": float(car.std(ddof=1)), "size_bmp": float(power[0]), **pick,
-            "delta_80pct_power_bmp": interpolate_target(np.asarray(DELTAS), power, POWER_TARGET),
-            "real_car_se": se_real, "plugin_t_power_2pct": plugin_t_power(se_real, n, 0.02)})
-        print(f"{name}: n={n} sd(rms)={100 * sigma:.2f}% size={power[0]:.3f} "
-              f"power 1/2/3% = {pick['power_bmp_1pct']:.3f}/{pick['power_bmp_2pct']:.3f}/"
-              f"{pick['power_bmp_3pct']:.3f}", flush=True)
+            "real_car_sd": float(car.std(ddof=1)), "size_bmp": b["size_bmp"],
+            "power_bmp_1pct": b["power_bmp_1pct"], "power_bmp_2pct": b["power_bmp_2pct"],
+            "power_bmp_3pct": b["power_bmp_3pct"],
+            "delta_80pct_power_bmp": b["delta_80pct_power_bmp"], "real_car_se": se_real,
+            "plugin_t_power_2pct": plugin_t_power(se_real, n, 0.02)})
 
     out = results_dir("per_stock_power")
-    pd.DataFrame(long_rows).to_csv(out / "power.csv", index=False, float_format="%.5f")
+    long_rows.to_csv(out / "power.csv", index=False, float_format="%.5f")
     summ = pd.DataFrame(summary)
     summ.to_csv(out / "summary.csv", index=False, float_format="%.5f")
     write_manifest(out, args.seed, {

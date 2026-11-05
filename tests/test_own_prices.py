@@ -50,7 +50,7 @@ def run(tmp_path_factory):
     out = tmp / "out"
     rc = _script().main(["--prices", str(prices), "--assets", str(assets), "--market", "SPX",
                          "--label", "synthetic", "--out", str(out), "--placebo-sets", "20",
-                         "--specifications", "2"])
+                         "--power-reps", "10", "--specifications", "2"])
     assert rc == 0
     return out, prices, assets, df
 
@@ -58,7 +58,8 @@ def run(tmp_path_factory):
 def test_every_output_is_labelled_synthetic(run):
     out = run[0]
     csvs = sorted(out.glob("*.csv"))
-    assert len(csvs) == 14 and (out / "trading_forward.csv").exists()
+    assert len(csvs) == 15
+    assert (out / "trading_forward.csv").exists() and (out / "power_by_asset.csv").exists()
     for f in csvs:
         d = pd.read_csv(f)
         assert list(d.columns)[0] == "data" and (d["data"] == "synthetic").all(), f.name
@@ -75,6 +76,17 @@ def test_manifest_has_the_input_checksums_and_no_price_is_written(run):
     text = "".join(f.read_text() for f in out.glob("*.csv"))
     sample = df["TRV"].dropna().iloc[[100, 2000, 5000]]
     assert not any(f"{v:.6f}" in text or f"{v:.6g}" in text for v in sample)
+
+
+def test_power_is_reported_at_each_assets_own_events_and_volatility(run):
+    out = run[0]
+    pw = pd.read_csv(out / "power_by_asset.csv")
+    cov = pd.read_csv(out / "coverage.csv").set_index("asset")
+    assert list(pw["asset"]) == list(cov.index)
+    assert (pw["events"].to_numpy() == cov.loc[pw["asset"], "used"].to_numpy()).all()
+    assert (pw["resid_sd_rms"] > 0).all()
+    assert ((pw["size_bmp"] >= 0) & (pw["size_bmp"] <= 1)).all()
+    assert "power_reps: 10" in (out / "MANIFEST.txt").read_text()
 
 
 def test_injected_effects_are_found_and_nothing_else(run):

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import pathlib
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 
 import numpy as np
@@ -24,6 +24,7 @@ from landfall.study import bootstrap as bs
 from landfall.study import eventstudy as es
 from landfall.study import inference as inf
 from landfall.study import multiple as mt
+from landfall.study import power as pw
 from landfall.study import sharpe as sh
 
 SIGNS = {"+": 1, "-": -1, "two-sided": 0, "none": 0}
@@ -164,6 +165,70 @@ def event_study(datas: list[AssetData], times: pd.Series, seed: int
     per_asset["bmp_p_holm"] = mt.holm(per_asset["bmp_p"])
     per_asset["bmp_p_bh"] = mt.benjamini_hochberg(per_asset["bmp_p"])
     return per_asset, pd.DataFrame(pooled), fits, cov
+
+
+POWER_DELTAS = (0.0, 0.005, 0.01, 0.015, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.10)
+"""True CAR[0, +10] values at which `power_by_asset` is evaluated by default (0 is the size)."""
+
+
+def power_by_asset(fits: dict, deltas: Sequence[float], reps: int, rng_key: Sequence[int],
+                   on_asset: Callable[[dict], None] | None = None
+                   ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Simulated power of the event-study tests at each asset's own event count and volatility.
+
+    For every asset with a fit, `landfall.study.power.power_curve` simulates GARCH-t returns with
+    as many events as the asset has and a residual sd equal to the root mean square of its
+    market-model residual sds (the stock's average residual variance), for each true CAR in
+    `deltas` (which must contain 0, 0.01, 0.02 and 0.03). The random key of asset number i (its
+    position in `fits`, assets without a fit counted) is `[*rng_key, i]`. Returns the long table
+    (one row per asset and delta, all tests with Monte Carlo SEs) and a summary with one row per
+    asset: the BMP size, its power at a true 1, 2 and 3%, and the smallest true CAR detected with
+    80% power by linear interpolation (NaN if the grid does not reach it). `on_asset` is called
+    with each summary row as soon as it is ready (progress output of a long run).
+    """
+    grid = np.asarray(deltas, dtype=float)
+
+    def at(x: float) -> int:
+        k = int(np.argmin(np.abs(grid - x)))
+        if not np.isclose(grid[k], x):
+            raise ValueError(f"the grid of true CARs must contain {x}")
+        return k
+
+    k0, k1, k2, k3 = (at(x) for x in (0.0, 0.01, 0.02, 0.03))
+    long_rows, summary = [], []
+    for i, (name, fit) in enumerate(fits.items()):
+        if fit is None:
+            continue
+        n, sigma = len(fit.mm.sigma), float(np.sqrt(np.mean(fit.mm.sigma ** 2)))
+        curve = pw.power_curve(n, sigma, grid, reps, [*rng_key, i])
+        head = {"asset": name, "group": fit.data.asset.group, "events": n, "resid_sd_rms": sigma}
+        long_rows += [{**head, **row} for row in curve.to_dict("records")]
+        bmp = curve["reject_bmp"].to_numpy()
+        summary.append({**head, "size_bmp": float(bmp[k0]), "power_bmp_1pct": float(bmp[k1]),
+                        "power_bmp_2pct": float(bmp[k2]), "power_bmp_3pct": float(bmp[k3]),
+                        "delta_80pct_power_bmp": pw.interpolate_target(grid, bmp, 0.8)})
+        if on_asset is not None:
+            on_asset(summary[-1])
+    return pd.DataFrame(long_rows), pd.DataFrame(summary)
+
+
+def largest_events(fits: dict, events: pd.DataFrame, n: int = 3) -> pd.DataFrame:
+    """The `n` events with the largest |CAR[0, +10]| of each asset, with the largest single-day
+    abnormal return inside that window and its event day. `events` is the table the fits were made
+    for (columns name, season, day0_date). A few events can dominate a stock's mean CAR."""
+    rows = []
+    for name, fit in fits.items():
+        if fit is None:
+            continue
+        car = fit.mm.car(0, 10)
+        post = fit.mm.ar[:, fit.mm.idx(0): fit.mm.idx(10) + 1]
+        for j in np.argsort(-np.abs(car), kind="stable")[:n]:
+            ev = events.iloc[int(fit.events[j])]
+            day = int(np.argmax(np.abs(post[j])))
+            rows.append({"asset": name, "storm": ev["name"], "season": int(ev["season"]),
+                         "day0_date": ev["day0_date"], "car_0_10": float(car[j]),
+                         "largest_daily_ar": float(post[j, day]), "largest_daily_ar_day": day})
+    return pd.DataFrame(rows)
 
 
 def placebo(datas: list[AssetData], calendar: pd.DatetimeIndex, times: pd.Series,
