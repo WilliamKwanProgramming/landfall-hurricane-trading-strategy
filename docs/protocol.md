@@ -128,4 +128,15 @@ that excludes 0, and the deflated Sharpe ratio of the best configuration exceeds
 
 ## Deviations
 
-None so far.
+No deviation so far.
+
+Clarifications written before the run (2026-11-05), while implementing the protocol; they fill
+gaps in the text above and were decided without looking at any event return:
+
+1. The data screen is applied to placebo asset-events too, so that the placebo statistic is the
+   same statistic as the real one.
+2. In the trading rules the data screen uses only the estimation window (known at the entry
+   close); screening on the holding period would use data after the entry.
+3. The placebo exclusion list is every geometric US landfall of any intensity from 1985 on.
+4. For the pooled rank test the signed abnormal returns and signed estimation residuals are
+   ranked.

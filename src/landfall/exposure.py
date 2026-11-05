@@ -74,8 +74,11 @@ def us_landfall_flags(node_h: NDArray, lat: NDArray, lon: NDArray, grid: LandGri
     lo = lon[:, seg] + (lon[:, seg + 1] - lon[:, seg]) * frac
     land = grid.is_land(la, lo)
     enter = land[:, 1:] & ~land[:, :-1]
-    us = in_polygon(la[:, 1:].ravel(), lo[:, 1:].ravel()).reshape(enter.shape)
-    return (enter & us).any(axis=1)
+    rows, cols = np.nonzero(enter)
+    us = in_polygon(la[rows, cols + 1], lo[rows, cols + 1])
+    out = np.zeros(lat.shape[0], dtype=bool)
+    out[rows[us]] = True
+    return out
 
 
 def forecast_exposure(fc: TrackForecast, residuals: NDArray, draws: NDArray, rm_km: float,
