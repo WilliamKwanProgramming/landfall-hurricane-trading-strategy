@@ -1,0 +1,14 @@
+asset,group,kind,sign,reason
+ALL,storm,stock,-,US home and auto insurer with Gulf and Atlantic coast exposure: expected claims
+TRV,storm,stock,-,US property insurer: expected claims
+UVE,storm,stock,-,Florida homeowners insurer: concentrated exposure
+HCI,storm,stock,-,Florida homeowners insurer: concentrated exposure
+RNR,storm,stock,-,property-catastrophe reinsurer: expected claims
+EG,storm,stock,-,reinsurer with property-catastrophe exposure (ticker RE before 2023)
+OJ,storm,future,+,damage to the Florida citrus crop reduces supply
+LUMBER,storm,future,+,rebuilding raises lumber demand
+NG,storm,future,two-sided,Gulf shut-ins raise prices; outages and closed LNG terminals lower demand
+MSFT,control,stock,none,no obvious hurricane link
+JNJ,control,stock,none,no obvious hurricane link
+MRK,control,stock,none,no obvious hurricane link
+PFE,control,stock,none,no obvious hurricane link
