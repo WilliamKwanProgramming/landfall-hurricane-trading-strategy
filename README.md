@@ -1,4 +1,5 @@
 # Landfall: hurricane forecasts, wind footprints and event studies
+[![CI](https://github.com/WilliamKwanProgramming/landfall-hurricane-trading-strategy/actions/workflows/ci.yml/badge.svg)](https://github.com/WilliamKwanProgramming/landfall-hurricane-trading-strategy/actions/workflows/ci.yml)
 
 Tools to test whether prices of hurricane-exposed securities reflect National Hurricane Center
 (NHC) information around US landfalls, and one pre-specified real-data test: four storm-relevant
@@ -186,14 +187,14 @@ compare with NHC official forecasts.*
 
 ### 4. Landfall definitions (real tracks)
 
-At hurricane strength on the US coast the two definitions find almost the same number of
-landfalls (333 flagged, 336 geometric, 1851-2019); the geometric rule finds more overall because it
-counts small islands and re-entries. The "L" flags are incomplete: 12 of the 16 storms found only by the geometric rule are 1966-1980
-US hurricane landfalls with no landfall entry at all in the rda mirror (among them Celia 1970,
-Carmen 1974, Eloise 1975, David and Frederic 1979, Allen 1980), and 14 of the 22 found only by the
-flags are flagged at 65 kt while the synoptic fixes the geometric rule interpolates are below 64 kt
-(`results/landfall_counts/storm_level_disagreements.csv`). Whether the 1966-1980 gap is in HURDAT2
-or only in the mirror was not checked.
+At hurricane strength on the US coast the two definitions find almost the same number of landfalls
+(333 flagged, 336 geometric, 1851-2019); the geometric rule finds more overall because it counts
+small islands and re-entries. The "L" flags are incomplete: 12 of the 16 storms found only by the
+geometric rule are 1966-1980 US hurricane landfalls with no landfall entry at all in the rda mirror
+(among them Celia 1970, Carmen 1974, Eloise 1975, David and Frederic 1979, Allen 1980), and 14 of
+the 22 found only by the flags are flagged at 65 kt while the synoptic fixes the geometric rule
+interpolates are below 64 kt (`results/landfall_counts/storm_level_disagreements.csv`). Whether the
+1966-1980 gap is in HURDAT2 or only in the mirror was not checked.
 
 ![US hurricane-landfall storms by definition](docs/img/landfall_counts.png)
 
@@ -323,9 +324,10 @@ bash scripts/reproduce.sh                    # every result, table and figure (r
 bash scripts/reproduce.sh --mutation         # also the mutation check
 ```
 
-Sanitizers: `cmake -S . -B build-asan -DLANDFALL_SANITIZE=ON -DCMAKE_BUILD_TYPE=Debug`. NHC file:
-`python scripts/fetch_data.py --source nhc` (not exercised here). Re-running the real study gives
-the same numbers (fixed seed). ATCF a-decks (`landfall.data.atcf`) give forecasts as issued.
+Sanitizers: `cmake -S . -B build-asan -DLANDFALL_SANITIZE=ON -DCMAKE_BUILD_TYPE=Debug` (GCC here;
+the Clang sanitizer build runs in CI only). NHC file: `python scripts/fetch_data.py --source nhc`
+(not exercised here). Re-running the real study gives the same numbers (fixed seed). ATCF a-decks
+(`landfall.data.atcf`) give forecasts as issued.
 
 ## Method
 
@@ -371,7 +373,6 @@ it and the index both have a close.
 - The bootstrap under-covers slightly; the rank test over-rejects under event-induced variance;
   the placebo test over-rejects (section 2).
 - Trading costs are assumptions; no market impact. Kernel timings come from a shared machine.
-- The Clang sanitizer build was run in CI only (its runtime is missing in the build sandbox).
 
 ## References
 
@@ -394,6 +395,4 @@ it and the index both have a close.
 - Willoughby, H. E., R. W. R. Darling, and M. E. Rahn (2006). Parametric representation of the primary hurricane vortex. Part II. *Monthly Weather Review* 134, 1102-1120.
 - Data and formats: NHC HURDAT2 format description; NRL ATCF format; HURDAT2 mirrors in the R packages HURDAT (T. Trice, MIT licence) and dplyr (`storms`); land mask from `global-land-mask` (T. Karin, MIT licence, GLOBE data); prices from the Python package skfolio.
 
-## Disclaimer
-
-Educational research project. Not investment advice.
+**Disclaimer.** Educational research project. Not investment advice.
