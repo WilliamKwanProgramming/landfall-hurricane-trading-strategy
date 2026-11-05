@@ -1,0 +1,71 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python ${{ matrix.python }} (ruff, C++ module, pytest)
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install toolchain and packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build g++-13
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test,prices]"
+      - name: Fetch the public hurricane track data (checksums verified)
+        run: python scripts/fetch_data.py
+      - name: Ruff
+        run: ruff check .
+      - name: Build the C++ module (warnings are errors)
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLANDFALL_WERROR=ON \
+            -DCMAKE_CXX_COMPILER=g++-13 -DPython3_EXECUTABLE="$(which python)"
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+      - name: Pytest (C++ tests required)
+        env:
+          LANDFALL_REQUIRE_CPP: "1"
+        run: python -m pytest -q
+
+  cpp:
+    name: C++ ${{ matrix.compiler }}, -Werror${{ matrix.sanitize == 'ON' && ', ASan and UBSan' || '' }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {compiler: gcc-13, package: g++-13, cxx: g++-13, sanitize: "OFF", type: Release}
+          - {compiler: clang-18, package: clang-18, cxx: clang++-18, sanitize: "OFF", type: Release}
+          - {compiler: gcc-13, package: g++-13, cxx: g++-13, sanitize: "ON", type: Debug}
+          - {compiler: clang-18, package: clang-18, cxx: clang++-18, sanitize: "ON", type: Debug}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build ${{ matrix.package }}
+          python3 -m pip install "pybind11>=3.0"
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DLANDFALL_WERROR=ON
+          -DLANDFALL_SANITIZE=${{ matrix.sanitize }} -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure

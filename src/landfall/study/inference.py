@@ -75,18 +75,22 @@ def bmp_kp(scar: NDArray, rbar: float) -> TestResult:
 
 def average_cross_correlation(resid_est: NDArray, groups: NDArray) -> float:
     """Average pairwise residual correlation over all N(N-1)/2 pairs; pairs in different
-    groups (event dates) count as zero."""
-    n = resid_est.shape[0]
+    groups (event dates) count as zero.
+
+    With z_i the standardised residual series (ddof = 1) and S_g = sum_{i in g} z_i, the sum
+    of the sample correlations over the pairs of group g is (sum_t S_gt^2 - sum_{i in g, t}
+    z_it^2) / (2 (T - 1)).
+    """
+    n, t = resid_est.shape
     if n < 2:
         return 0.0
-    total = 0.0
-    for g in np.unique(groups):
-        idx = np.nonzero(groups == g)[0]
-        if len(idx) < 2:
-            continue
-        c = np.corrcoef(resid_est[idx])
-        total += (c.sum() - np.trace(c)) / 2.0
-    return float(total / (n * (n - 1) / 2.0))
+    z = resid_est - resid_est.mean(axis=1, keepdims=True)
+    z = z / z.std(axis=1, ddof=1, keepdims=True)
+    _, inv = np.unique(groups, return_inverse=True)
+    s = np.zeros((inv.max() + 1, t))
+    np.add.at(s, inv, z)
+    pair_sum = ((s ** 2).sum() - (z ** 2).sum()) / (2.0 * (t - 1))
+    return float(pair_sum / (n * (n - 1) / 2.0))
 
 
 def rank_test(est_ar: NDArray, win_ar: NDArray, cols: slice | NDArray) -> TestResult:
