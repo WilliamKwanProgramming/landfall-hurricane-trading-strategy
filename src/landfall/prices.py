@@ -190,3 +190,45 @@ def check_prices(prices: pd.DataFrame, market: str, max_gap_days: int = MAX_GAP_
                      "market_dates_missing": missing, "zero_return_share": round(zero, 4),
                      "largest_abs_return": round(big, 4), "warnings": "; ".join(warn)})
     return pd.DataFrame(rows)
+
+
+def synthetic_prices(names: list[str], market: str, event_times: pd.Series, seed: int,
+                     effects: dict[str, float] | None = None,
+                     starts: dict[str, str] | None = None, missing_share: float = 0.01,
+                     first: str = "1989-01-02", last: str = "2022-12-30") -> pd.DataFrame:
+    """SYNTHETIC daily closes, in the schema of `load_prices`, for testing and demonstrating
+    scripts/run_own_prices.py. Not market data.
+
+    Market: t(5) returns scaled to 1% daily sd with mean 0.03%. Asset i: beta_i uniform on
+    [0.5, 1.3] times the market return plus t(5) noise scaled to 1.5% daily sd, plus, if
+    `effects` gives it a total abnormal return c_i, c_i / 11 on each of event days 0 .. +10 of
+    every event (day 0 = the first business day whose 20:00 UTC close is at or after the event
+    time). A series listed in `starts` begins on that date; `missing_share` of each asset's
+    dates are left empty at random (holidays that differ from the market's).
+    """
+    from landfall.study import eventstudy as es
+
+    effects = effects or {}
+    starts = starts or {}
+    rng = np.random.default_rng(seed)
+    dates = pd.DatetimeIndex(pd.bdate_range(first, last)).astype("datetime64[s]")
+    n = len(dates)
+    scale = np.sqrt(3.0 / 5.0)  # sd of t(5) is sqrt(5/3)
+    m = 0.0003 + 0.01 * scale * rng.standard_t(5, n)
+    d0 = es.event_rows(dates, event_times)
+    d0 = d0[d0 >= 0]
+    out = {market: 100.0 * np.cumprod(1.0 + m)}
+    for name in names:
+        r = rng.uniform(0.5, 1.3) * m + 0.015 * scale * rng.standard_t(5, n)
+        c = effects.get(name, 0.0)
+        if c:
+            for d in d0:
+                r[d: min(d + 11, n)] += c / 11.0
+        p = 100.0 * np.cumprod(1.0 + r)
+        p[rng.random(n) < missing_share] = np.nan
+        if name in starts:
+            p[dates < pd.Timestamp(starts[name])] = np.nan
+        out[name] = p
+    df = pd.DataFrame(out, index=dates)
+    df.index.name = "date"
+    return df[[*names, market]]
