@@ -12,6 +12,9 @@ indicative. Writes results/benchmark/ (results/benchmark/wave1/ holds the first 
 made with the wave-1 version of this script at commit fde66f1).
 
 Usage: python experiments/benchmark_footprint.py [--reps 15] [--seed 20261105]
+           [--wait-load 1.3 --wait-minutes 10]
+With --wait-load, the timing starts once the 1-minute load average is below that value or after
+--wait-minutes, whichever comes first (scripts/reproduce.sh uses it; the wait is recorded).
 """
 
 from __future__ import annotations
@@ -47,6 +50,8 @@ def main() -> int:
     ap.add_argument("--reps", type=int, default=15)
     ap.add_argument("--seed", type=int, default=20261105)
     ap.add_argument("--storms", type=int, default=500)
+    ap.add_argument("--wait-load", type=float, default=None)
+    ap.add_argument("--wait-minutes", type=float, default=10.0)
     args = ap.parse_args()
     rng = np.random.default_rng(args.seed)
     n = args.storms
@@ -65,6 +70,11 @@ def main() -> int:
     max_rel = {name: float(np.max(np.abs(r - ref) / np.maximum(np.abs(ref), 1e-12)))
                for name, r in results.items() if name != "numpy"}
 
+    waited = time.monotonic()
+    if args.wait_load is not None:
+        while load1() >= args.wait_load and time.monotonic() - waited < 60 * args.wait_minutes:
+            time.sleep(15)
+    waited = time.monotonic() - waited
     load_before = load1()
     times: dict[str, list[float]] = {name: [] for name in ENGINES}
     for _ in range(args.reps):
@@ -96,6 +106,8 @@ def main() -> int:
         "order": "interleaved per repetition: numpy, cpp reference, cpp optimised",
         "threads": "1 (all engines; OMP/OpenBLAS threads set to 1 by the caller)",
         "load1_before": f"{load_before:.2f}", "load1_after": f"{load_after:.2f}",
+        "waited_for_load_s": f"{waited:.0f}" + (f" (target below {args.wait_load})"
+                                                 if args.wait_load is not None else ""),
         "max_relative_difference_vs_numpy": "; ".join(f"{k}: {v:.2e}"
                                                       for k, v in max_rel.items()),
         "ratio_columns": "median_s = ratio of medians; min_s = min(a)/max(b); "

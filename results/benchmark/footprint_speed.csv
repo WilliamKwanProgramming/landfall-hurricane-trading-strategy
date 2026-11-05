@@ -1,0 +1,7 @@
+engine,reps,median_s,min_s,max_s,ns_per_evaluation
+numpy,15,1.072,0.822,1.279,178
+cpp reference (wave-1 kernel),15,1.071,0.947,1.308,178
+cpp optimised,15,0.483,0.423,0.571,80
+ratio numpy / cpp optimised,15,2.2,1.4,3.0,
+ratio cpp reference / cpp optimised,15,2.2,1.7,3.1,
+ratio numpy / cpp reference,15,1.0,0.6,1.3,

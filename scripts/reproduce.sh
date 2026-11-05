@@ -34,6 +34,9 @@ for sc in gaussian garch_t garch_t_event_variance garch_t_cross_correlation; do
 done
 step "$PY" experiments/synthetic_eventstudy.py --scenario garch_t --n-events 35 --n-assets 1 --seed "$SEED"
 step "$PY" experiments/real_eventstudy.py --seed "$SEED"
+# Speed of NumPy vs the two C++ kernels: indicative only, waits up to 10 min for a quiet machine.
+PYTHONPATH="build/cpp${PYTHONPATH:+:$PYTHONPATH}" step "$PY" experiments/benchmark_footprint.py \
+  --reps 15 --seed "$SEED" --wait-load 1.3 --wait-minutes 10
 if [[ "${1:-}" == "--mutation" ]]; then
   step "$PY" tests/mutation_check.py --out results/mutation_check.txt
 fi
