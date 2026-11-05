@@ -98,11 +98,11 @@ MUTANTS = [
     ("C1 C++ kernel: inland decay rate 0.95 / h instead of 0.095 / h", [
         ("cpp/src/footprint.cpp", "constexpr double kKdAlpha = 0.095;",
          "constexpr double kKdAlpha = 0.95;")]),
-    ("C2 C++ kernel: wind direction clockwise (southern-hemisphere rotation)", [
-        ("cpp/src/footprint.cpp", "const double ue = -vs * cos_th + k * ce;",
-         "const double ue = vs * cos_th + k * ce;"),
-        ("cpp/src/footprint.cpp", "const double un = vs * sin_th + k * cn;",
-         "const double un = -vs * sin_th + k * cn;")]),
+    ("C2 C++ reference kernel: wind direction clockwise (southern-hemisphere rotation)", [
+        ("cpp/src/footprint.cpp", "\n  const double ue = -vs * cos_th + k * ce;",
+         "\n  const double ue = vs * cos_th + k * ce;"),
+        ("cpp/src/footprint.cpp", "\n  const double un = vs * sin_th + k * cn;",
+         "\n  const double un = -vs * sin_th + k * cn;")]),
     ("P1 own-prices loader accepts a zero price", [
         (PR, "bad = num.notna() & ~(np.isfinite(num) & (num > 0))",
          "bad = num.notna() & ~(np.isfinite(num) & (num >= 0))")]),
