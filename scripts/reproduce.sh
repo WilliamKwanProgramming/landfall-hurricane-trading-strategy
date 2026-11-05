@@ -27,6 +27,11 @@ step "$PY" scripts/fetch_data.py
 step cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPython3_EXECUTABLE="$(command -v "$PY")"
 step cmake --build build
 step ctest --test-dir build --output-on-failure
+if [[ "${1:-}" == "--mutation" ]]; then
+  # Before anything in results/ is rewritten: the suite includes the README-number test, which
+  # compares README.md with results/, and the experiments below change the timings in results/.
+  step "$PY" tests/mutation_check.py --out results/mutation_check.txt
+fi
 step "$PY" experiments/landfall_counts.py
 step "$PY" experiments/forecast_skill.py --seed "$SEED"
 for sc in gaussian garch_t garch_t_event_variance garch_t_cross_correlation; do
@@ -47,9 +52,6 @@ if command -v valgrind > /dev/null; then step "$PY" experiments/profile_kernel.p
 # Speed of NumPy vs the two C++ kernels: indicative only, waits up to 2 min for a quiet machine.
 PYTHONPATH="build/cpp${PYTHONPATH:+:$PYTHONPATH}" step "$PY" experiments/benchmark_footprint.py \
   --reps 15 --seed "$SEED" --wait-load 1.3 --wait-minutes 2
-if [[ "${1:-}" == "--mutation" ]]; then
-  step "$PY" tests/mutation_check.py --out results/mutation_check.txt
-fi
 step "$PY" scripts/make_tables.py
 step "$PY" scripts/make_figures.py
 
