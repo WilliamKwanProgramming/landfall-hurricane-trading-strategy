@@ -1,7 +1,7 @@
 # Landfall: hurricane forecasts, wind footprints and event studies
 
 Tools to test whether prices of hurricane-exposed securities reflect National Hurricane Center
-(NHC) information around US landfalls, and one pre-registered real-data test: four storm-relevant
+(NHC) information around US landfalls, and one pre-specified real-data test: four storm-relevant
 stocks and four controls around 39 US hurricane landfalls 1990-2022 show nothing (Holm-adjusted
 p-values of 1.0; a forecast-trigger trading rule loses money out of sample), in a design whose
 per-stock tests would detect a true 2% abnormal return only about 44% of the time.
@@ -293,7 +293,7 @@ no finding, but three of the 13 placebo p-values are below 0.05 (see section 2).
 it finds an injected -6% effect on two insurers and nothing else.
 
 <!-- table:own_prices_synthetic -->
-**scripts/run_own_prices.py on SYNTHETIC prices without any injected effect (13 series, 39 events, 1000 placebo sets, 36 s; synthetic data)**
+**scripts/run_own_prices.py on SYNTHETIC prices without any injected effect: simulated series that carry the template asset names, not market prices (13 series, 39 events, 1000 placebo sets, 36 s; synthetic data)**
 
 | asset | group | events used | mean CAR[0,+10], % | Holm p | placebo p | finding |
 |---|---|---|---|---|---|---|

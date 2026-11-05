@@ -204,7 +204,8 @@ def main() -> int:
         man = dict(ln.split(": ", 1) for ln in (own / "MANIFEST.txt").read_text().splitlines()
                    if ": " in ln)
         add("own_prices_synthetic",
-            f"scripts/run_own_prices.py on SYNTHETIC prices without any injected effect "
+            f"scripts/run_own_prices.py on SYNTHETIC prices without any injected effect: "
+            f"simulated series that carry the template asset names, not market prices "
             f"({len(rows)} series, {man['events_primary']} events, "
             f"{man['placebo_sets']} placebo sets, {man['elapsed_seconds']} s; synthetic data)",
             pd.DataFrame(rows))

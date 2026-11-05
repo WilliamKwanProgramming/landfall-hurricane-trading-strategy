@@ -128,7 +128,7 @@
 | wave 2 | ratio cpp reference / cpp optimised | 15 | 2.3 | 1.2 | 4.3 |  |
 | wave 2 | ratio numpy / cpp reference | 15 | 0.9 | 0.5 | 1.9 |  |
 
-**scripts/run_own_prices.py on SYNTHETIC prices without any injected effect (13 series, 39 events, 1000 placebo sets, 36 s; synthetic data)**
+**scripts/run_own_prices.py on SYNTHETIC prices without any injected effect: simulated series that carry the template asset names, not market prices (13 series, 39 events, 1000 placebo sets, 36 s; synthetic data)**
 
 | asset | group | events used | mean CAR[0,+10], % | Holm p | placebo p | finding |
 |---|---|---|---|---|---|---|

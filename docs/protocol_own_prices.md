@@ -15,7 +15,7 @@ otherwise; the differences are listed at the end.
    loaded, each with a sign and a reason.
 2. Write `assets.csv` (template: `docs/own_prices_assets.csv`) with exactly the assets of your
    copy.
-3. Commit both. The commit hash is the time stamp of the pre-registration; the run's MANIFEST
+3. Commit both. The commit hash is the time stamp of the pre-specification; the run's MANIFEST
    records the commit, the SHA-256 of the price file and of `assets.csv`.
 
 A run on a list, window, source or setting other than the committed one is a new specification.
