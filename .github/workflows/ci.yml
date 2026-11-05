@@ -53,7 +53,8 @@ jobs:
           - {compiler: gcc-13, package: g++-13, cxx: g++-13, sanitize: "OFF", type: Release}
           - {compiler: clang-18, package: clang-18, cxx: clang++-18, sanitize: "OFF", type: Release}
           - {compiler: gcc-13, package: g++-13, cxx: g++-13, sanitize: "ON", type: Debug}
-          - {compiler: clang-18, package: clang-18, cxx: clang++-18, sanitize: "ON", type: Debug}
+          # The Clang sanitizer runtimes are a separate Debian/Ubuntu package.
+          - {compiler: clang-18, package: "clang-18 libclang-rt-18-dev", cxx: clang++-18, sanitize: "ON", type: Debug}
     steps:
       - uses: actions/checkout@v4
       - name: Install toolchain
