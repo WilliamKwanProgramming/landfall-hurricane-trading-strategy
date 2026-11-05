@@ -242,7 +242,8 @@ def main() -> int:
                  "placebo_p": pmap["storm (signed, pooled)"], "sign_as_hypothesised": None,
                  "meets_criterion": bool(pr["bmp_kp_p"] < 0.05
                                          and pmap["storm (signed, pooled)"] < 0.05)})
-    pd.DataFrame(find).to_csv(out / "findings_event_study.csv", index=False)
+    pd.DataFrame(find).to_csv(out / "findings_event_study.csv", index=False,
+                              float_format="%.6g")
 
     # Trading rules.
     costs = bt.Costs()
@@ -255,7 +256,8 @@ def main() -> int:
     samples = F.build_samples(tracks)
     probs = signals.landfall_probabilities(samples, range(SEASONS[0], SEASONS[1] + 1),
                                            atlantic_land_grid(coarsen=6), 200, args.seed)
-    probs.to_csv(out / "landfall_probabilities.csv.gz", index=False, float_format="%.4f")
+    probs.to_csv(out / "landfall_probabilities.csv.gz", index=False, float_format="%.4f",
+                 compression={"method": "gzip", "mtime": 0})
 
     def r2_entries(cfg):
         p_star, hold = cfg

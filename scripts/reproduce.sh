@@ -17,8 +17,10 @@ commands=()
 
 step() {
   echo "== $*"
-  commands+=("$*")
+  local t0
+  t0=$(date +%s)
   "$@"
+  commands+=("$* [$(( $(date +%s) - t0 )) s]")
 }
 
 step "$PY" scripts/fetch_data.py
@@ -49,7 +51,8 @@ elapsed=$(( $(date +%s) - start ))
   echo "seed: $SEED (all seeded experiments; landfall_counts is deterministic)"
   echo "python: $("$PY" -c 'import platform; print(platform.python_version())')"
   echo "numpy: $("$PY" -c 'import numpy; print(numpy.__version__)')"
-  echo "machine: $(uname -m) $(uname -s) $(uname -r), $(nproc) cores"
+  echo "machine: $(uname -m) $(uname -s) $(uname -r), $(nproc) cores available"
+  echo "load_average_at_end: $(cut -d' ' -f1-3 /proc/loadavg) (other jobs share the machine)"
   echo "elapsed_seconds: $elapsed"
   echo "commands:"
   for c in "${commands[@]}"; do echo "  $c" | sed "s#$(command -v "$PY")#python#"; done

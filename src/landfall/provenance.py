@@ -34,12 +34,13 @@ def write_manifest(out_dir: pathlib.Path, seed: int | None, extra: dict | None =
     import numpy
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    dirty = _git("status", "--porcelain", "--untracked-files=no")
+    dirty = _git("status", "--porcelain", "--untracked-files=no", "--", "src", "tests", "cpp",
+                 "experiments", "scripts", "docs", "CMakeLists.txt", "pyproject.toml")
     lines = [
         f"command: {command_line()}",
         f"seed: {seed if seed is not None else 'none (deterministic)'}",
         f"git_commit: {_git('rev-parse', 'HEAD')}",
-        f"working_tree: {'modified (uncommitted changes to tracked files)' if dirty else 'clean'}",
+        f"working_tree: {'modified code (uncommitted changes)' if dirty else 'clean code'}",
         f"date_utc: {datetime.datetime.now(datetime.UTC):%Y-%m-%dT%H:%M:%SZ}",
         f"python: {platform.python_version()}",
         f"numpy: {numpy.__version__}",
