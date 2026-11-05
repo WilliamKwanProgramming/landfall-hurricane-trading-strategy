@@ -112,7 +112,7 @@ def main() -> int:
                                                       for k, v in max_rel.items()),
         "ratio_columns": "median_s = ratio of medians; min_s = min(a)/max(b); "
                          "max_s = max(a)/min(b)",
-        "cpu_count": os.cpu_count()})
+        "cpu_count": os.cpu_count(), "process_niceness": os.nice(0)})
     print(df.to_string())
     print(f"load {load_before:.2f} -> {load_after:.2f}, max rel diff {max_rel}")
     return 0
