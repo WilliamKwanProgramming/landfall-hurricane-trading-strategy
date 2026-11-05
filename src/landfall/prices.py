@@ -17,8 +17,9 @@ dividends (total-return closes); unadjusted closes put the dividend into the ret
 ex-dividend day as a false negative return, and an unadjusted split looks like a -50% day. For
 futures use a continuous series adjusted at the rolls by ratio (multiplicative) adjustment:
 unadjusted roll gaps are false returns, and difference (Panama) adjustment can make old prices
-negative, which the validation rejects. The market index used in wave 1 (S&P 500) is a price
-index without dividends; whatever index is used, say which in the protocol copy.
+negative, which the validation rejects. The market index used in the eight-stock study
+(S&P 500) is a price index without dividends; whatever index is used, say which in the protocol
+copy.
 
 Alignment. Each asset is aligned with the market separately (`asset_returns`): its calendar is
 the set of dates on which both it and the market have a price, and both returns are computed on
@@ -38,6 +39,13 @@ from numpy.typing import NDArray
 
 MAX_GAP_DAYS = 7
 """Gaps between consecutive prices longer than this many calendar days are reported."""
+
+SPLIT_FACTORS = (1.5, 2.0, 3.0, 4.0, 5.0, 10.0)
+"""Common split and reverse-split factors k: a daily gross return within `SPLIT_TOL` (log scale)
+of 1/k or k is reported as a possible unadjusted split (a 2:1 split is a return of about -50%,
+3:2 about -33%; such days can fall below the 50% move warning)."""
+
+SPLIT_TOL = 0.03
 
 MAX_ZERO_SHARE = 0.10
 """Share of exactly-zero daily returns above which a series is reported as possibly stale (the
@@ -163,7 +171,8 @@ def check_prices(prices: pd.DataFrame, market: str, max_gap_days: int = MAX_GAP_
     `warnings` lists what deserves a look before the run (it does not stop the run: the event
     study screens stale asset-events itself): gaps longer than `max_gap_days` calendar days, a
     share of zero returns above `max_zero_share`, market dates inside the series' range without
-    a price, and daily moves beyond +-50% (often an unadjusted split or roll).
+    a price, daily moves beyond +-50% (often an unadjusted split or roll), and daily gross
+    returns within `SPLIT_TOL` (log) of a split factor 1/k or k, k in `SPLIT_FACTORS`.
     """
     mdates = prices.index[prices[market].notna()]
     rows = []
@@ -184,6 +193,12 @@ def check_prices(prices: pd.DataFrame, market: str, max_gap_days: int = MAX_GAP_
             warn.append(f"{missing} market dates without a price")
         if big > 0.5:
             warn.append(f"largest daily move {big:.0%} on {r.abs().idxmax().date()}")
+        lg = np.abs(np.log1p(r.to_numpy()))
+        near = np.min(np.abs(lg[:, None] - np.log(SPLIT_FACTORS)[None, :]), axis=1) < SPLIT_TOL \
+            if len(lg) else np.zeros(0, dtype=bool)
+        if near.any():
+            k = int(np.argmax(near))
+            warn.append(f"possible unadjusted split: {r.iloc[k]:+.0%} on {r.index[k].date()}")
         rows.append({"series": c, "role": "market" if c == market else "asset",
                      "first_date": s.index[0].date(), "last_date": s.index[-1].date(),
                      "prices": len(s), "longest_gap_days": int(gaps.max()) if gaps.size else 0,

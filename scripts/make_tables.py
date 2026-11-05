@@ -110,16 +110,42 @@ def main() -> int:
     add("synthetic_size",
         "Size at delta = 0: rejection rate at 5% and interval coverage, % (Monte Carlo SE), "
         "2000 replications, 30 events x 4 stocks (synthetic data)", pd.DataFrame(rows))
-    rows = []
-    for sc, label in (("garch_t", "30 x 4"), ("garch_t_35x1", "35 x 1")):
+    for key, sc, label in (("synthetic_power", "garch_t", "30 x 4"),
+                           ("synthetic_power_1stock", "garch_t_35x1", "35 x 1")):
+        rows = []
         t = pd.read_csv(R / "synthetic_eventstudy" / f"{sc}.csv")
         for _, z in t.iterrows():
             rows.append({"design": label, "delta": pct(z["delta"]),
                          "bias of mean CAR": f"{z['bias']:+.5f} ({z['bias_mcse']:.5f})",
                          **{k: f"{100 * z[f'reject_{k}']:.1f}" for k in tests}})
-    add("synthetic_power",
-        "Power under GARCH-t: rejection rate at 5%, % (bias with Monte Carlo SE), 2000 "
-        "replications (synthetic data)", pd.DataFrame(rows))
+        add(key,
+            f"Power under GARCH-t at a residual sd of 2% a day for every stock ({label}): "
+            "rejection rate at 5%, % (bias with Monte Carlo SE), 2000 replications "
+            "(synthetic data)", pd.DataFrame(rows))
+    psp = R / "per_stock_power" / "summary.csv"
+    if psp.exists():
+        d = pd.read_csv(psp)
+        man = dict(ln.split(": ", 1) for ln in (R / "per_stock_power" / "MANIFEST.txt")
+                   .read_text().splitlines() if ": " in ln)
+        reps = man["design"].split(",")[1].split()[0]
+        rows = []
+        for _, z in d.iterrows():
+            rows.append({
+                "stock": z["stock"], "group": z["group"], "events": int(z["events"]),
+                "residual sd, % a day (rms)": f"{100 * z['resid_sd_rms']:.2f}",
+                "power at 1%": f"{100 * z['power_bmp_1pct']:.1f}",
+                "at 2%": f"{100 * z['power_bmp_2pct']:.1f}",
+                "at 3%": f"{100 * z['power_bmp_3pct']:.1f}",
+                "CAR detected with 80% power": (
+                    f"{100 * z['delta_80pct_power_bmp']:.1f}%"
+                    if pd.notna(z["delta_80pct_power_bmp"]) else "above 6%"),
+                "size": f"{100 * z['size_bmp']:.1f}",
+                "t-test cross-check at 2%": f"{100 * z['plugin_t_power_2pct']:.0f}"})
+        add("per_stock_power",
+            "Power of the per-stock BMP test at each stock's own event count and residual "
+            "volatility: rejection rate at 5%, % (true CAR[0,+10] of 1%, 2%, 3%; size at 0), "
+            f"{reps} replications, Monte Carlo SE at most 1.1 points "
+            "(synthetic returns calibrated to the real stocks)", pd.DataFrame(rows))
 
     # Real event study.
     a = pd.read_csv(R / "real_eventstudy" / "car_tests_primary.csv")
@@ -136,6 +162,19 @@ def main() -> int:
     add("real_car",
         "CAR[0,+10] around US hurricane landfalls 1990-2022, %, 95% stationary-bootstrap "
         "interval (real data)", pd.DataFrame(rows))
+    sens = pd.read_csv(R / "real_eventstudy" / "sensitivity_car_tests.csv")
+    sens = sens[sens["window"] == "post[0,+10]"]
+    rows = []
+    for _, z in sens.iterrows():
+        rows.append({"sensitivity": z["sensitivity"], "stock": z["asset"], "events": int(z["n"]),
+                     "mean CAR[0,+10]": ci(100 * z["mean_car"], 100 * z["boot_lo"],
+                                           100 * z["boot_hi"], ".2f"),
+                     "BMP p": f"{z['bmp_p']:.3f}", "Patell p": f"{z['patell_p']:.3f}",
+                     "naive t p": f"{z['naive_p']:.3f}", "rank p": f"{z['rank_p']:.3f}"})
+    add("real_sensitivity",
+        "Sensitivity analyses of the CAR[0,+10] tests, no multiple-testing adjustment: all "
+        "events kept (no overlap rule) and events from the HURDAT2 landfall flags, 1990-2019 "
+        "(real data)", pd.DataFrame(rows))
     p = pd.read_csv(R / "real_eventstudy" / "pooled_primary.csv")
     p = p.assign(mean_car=lambda x: [ci(100 * m, 100 * lo, 100 * hi, ".2f") for m, lo, hi in
                                      zip(x["mean_car"], x["boot_lo"], x["boot_hi"],
@@ -148,36 +187,37 @@ def main() -> int:
     tc = pd.read_csv(R / "real_eventstudy" / "trading_configs.csv")
     tc = tc[tc["primary"]]
     lo = pd.read_csv(R / "real_eventstudy" / "trading_loso.csv")
+    fw = pd.read_csv(R / "real_eventstudy" / "trading_forward.csv")
     ds = pd.read_csv(R / "real_eventstudy" / "trading_dsr.csv").set_index("rule")
-    rows = []
-    for _, z in tc.iterrows():
-        rows.append({"rule": z["rule"], "evaluation": f"primary {z['config']}",
-                     "events": int(z["events"]),
-                     "mean net per event": ci(100 * z["mean_net"], 100 * z["boot_lo"],
-                                              100 * z["boot_hi"], ".2f"),
-                     "Sharpe per event": f"{z['sharpe_per_event']:.3f}",
-                     "PSR(0)": f"{z['psr_vs_0']:.3f}", "DSR of best of 9": ""})
+
+    def trade_row(z: pd.Series, evaluation: str, dsr: str) -> dict:
+        return {"rule": z["rule"], "evaluation": evaluation, "events": int(z["events"]),
+                "mean net per event": ci(100 * z["mean_net"], 100 * z["boot_lo"],
+                                         100 * z["boot_hi"], ".2f"),
+                "mean gross per event (before costs)": ci(
+                    100 * z["mean_gross"], 100 * z["gross_lo"], 100 * z["gross_hi"], ".2f"),
+                "Sharpe per event": f"{z['sharpe_per_event']:.3f}",
+                "PSR(0)": f"{z['psr_vs_0']:.3f}", "DSR of best of 9": dsr}
+
+    rows = [trade_row(z, f"primary {z['config']}", "") for _, z in tc.iterrows()]
     for _, z in lo.iterrows():
-        rows.append({"rule": z["rule"], "evaluation": "leave-one-season-out",
-                     "events": int(z["events"]),
-                     "mean net per event": ci(100 * z["mean_net"], 100 * z["boot_lo"],
-                                              100 * z["boot_hi"], ".2f"),
-                     "Sharpe per event": f"{z['sharpe_per_event']:.3f}",
-                     "PSR(0)": f"{z['psr_vs_0']:.3f}",
-                     "DSR of best of 9": f"{ds.loc[z['rule'], 'dsr']:.3f} "
-                                         f"(best {ds.loc[z['rule'], 'best_config']})"})
+        rows.append(trade_row(z, "leave-one-season-out (cross-validated)",
+                              f"{ds.loc[z['rule'], 'dsr']:.3f} "
+                              f"(best {ds.loc[z['rule'], 'best_config']})"))
+    for _, z in fw.iterrows():
+        rows.append(trade_row(z, "forward-only (expanding window)", ""))
     add("trading",
-        "Trading rules, net of costs, %, 95% stationary-bootstrap interval (real data)",
-        pd.DataFrame(rows))
+        "Trading rules, %, 95% stationary-bootstrap interval (real data); net of assumed costs, "
+        "and gross of them for the same events", pd.DataFrame(rows))
 
     bench = R / "benchmark" / "footprint_speed.csv"
     if bench.exists():
         new = pd.read_csv(bench, dtype=str, keep_default_na=False)
-        new.insert(0, "measurement", "wave 2")
-        old = pd.read_csv(R / "benchmark" / "wave1" / "footprint_speed.csv", dtype=str)
-        old["engine"] = old["engine"].replace({"cpp": "cpp (wave-1 kernel)",
-                                               "ratio numpy/cpp": "ratio numpy / cpp (wave-1)"})
-        old.insert(0, "measurement", "wave 1")
+        new.insert(0, "measurement", "second run")
+        old = pd.read_csv(R / "benchmark" / "first_run" / "footprint_speed.csv", dtype=str)
+        old["engine"] = old["engine"].replace({
+            "cpp": "cpp (first kernel)", "ratio numpy/cpp": "ratio numpy / cpp (first kernel)"})
+        old.insert(0, "measurement", "first run")
         old["ns_per_evaluation"] = ""
         df = pd.concat([old, new], ignore_index=True)
         df.columns = ["measurement", "engine", "reps", "median (s)", "min (s)", "max (s)",

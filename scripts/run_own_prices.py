@@ -4,9 +4,9 @@ the R1 and R2 trading rules and the deflated Sharpe ratio, for the assets of an 
 
 Inputs: a price CSV (schema in landfall/prices.py; it is read, never copied) and assets.csv
 (template docs/own_prices_assets.csv). The events, the placebo exclusions and the forecast
-probabilities are read from results/ (committed wave-1 outputs computed from hurricane tracks
-only). Writes CSV files and a MANIFEST with the SHA-256 of both inputs to --out; no price is
-written. Every output row carries the --label ("real" or "synthetic").
+probabilities are read from results/ (committed outputs of the eight-stock study, computed from
+hurricane tracks only). Writes CSV files and a MANIFEST with the SHA-256 of both inputs to --out;
+no price is written. Every output row carries the --label ("real" or "synthetic").
 
 Usage:
   python scripts/run_own_prices.py --prices PATH --assets assets.csv --market SPX --label real \
@@ -105,16 +105,18 @@ def main(argv: list[str] | None = None) -> int:
     rules = (("R1 calendar (not tradeable)", pl.R1_GRID, pl.calendar_entries(prim),
               pl.R1_PRIMARY),
              ("R2 forecast trigger", pl.R2_GRID, pl.trigger_entries(probs), pl.R2_PRIMARY))
-    tabs, dsrs, losos = [], [], []
+    tabs, dsrs, losos, fwds = [], [], [], []
     for name, grid, fn, primary in rules:
-        t, d, lrow, _ = pl.evaluate_rule(name, grid, fn, datas, costs, n_years, args.seed,
-                                         primary, trials_multiplier=args.specifications)
+        t, d, lrow, _, frow = pl.evaluate_rule(name, grid, fn, datas, costs, n_years, args.seed,
+                                               primary, trials_multiplier=args.specifications)
         tabs.append(t)
         dsrs.append(d)
         losos.append(lrow)
+        fwds.append(frow)
     save(pd.concat(tabs), "trading_configs.csv")
     save(pd.DataFrame(dsrs), "trading_dsr.csv")
     save(pd.DataFrame(losos), "trading_loso.csv")
+    save(pd.DataFrame(fwds), "trading_forward.csv")
     save(pd.DataFrame([pl.trading_finding(dsrs[1], losos[1])]), "findings_trading.csv")
 
     all_ev = events.sort_values("time").reset_index(drop=True)

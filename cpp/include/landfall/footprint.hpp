@@ -61,7 +61,7 @@ bool max_wind(const StormArrays& storms, const double* lat_p, const double* lon_
               std::int64_t n_points, const LandGridView& grid, double dt_h, bool decay,
               double* out);
 
-// The first (wave-1) kernel, kept unchanged as a reference for tests and the benchmark: it
+// The first kernel, kept unchanged as a reference for tests and the benchmark: it
 // calls wind_speed() for every (storm, step, point), i.e. about fifteen libm functions each.
 bool max_wind_reference(const StormArrays& storms, const double* lat_p, const double* lon_p,
                         std::int64_t n_points, const LandGridView& grid, double dt_h, bool decay,

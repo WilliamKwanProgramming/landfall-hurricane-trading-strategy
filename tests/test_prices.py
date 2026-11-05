@@ -94,3 +94,19 @@ def test_check_prices_reports_gaps_stale_series_and_jumps():
     assert rep.loc["GAP", "market_dates_missing"] == 10
     assert rep.loc["GAP", "longest_gap_days"] == 15
     assert "longest gap 15 days" in rep.loc["GAP", "warnings"]
+
+
+@pytest.mark.parametrize("ratio, same_day_move", [(1 / 2, 1.01), (1 / 2, 0.99), (2 / 3, 1.0),
+                                                  (1 / 3, 1.02), (2.0, 1.0)])
+def test_check_prices_flags_unadjusted_splits_below_50_percent(ratio, same_day_move):
+    # A 2:1 split on a day the stock rose 1% is a -49.5% return and a 3:2 split is -33%: both
+    # stayed below the 50% move warning although they are the errors it is meant to catch.
+    idx = pd.DatetimeIndex(pd.bdate_range("2020-01-01", periods=60))
+    rng = np.random.default_rng(1)
+    mkt = 100 * np.exp(np.cumsum(rng.normal(0, 0.01, 60)))
+    a = 50 * np.exp(np.cumsum(rng.normal(0, 0.005, 60)))
+    a[30:] *= ratio
+    a[30] *= same_day_move
+    rep = P.check_prices(pd.DataFrame({"M": mkt, "A": a}, index=idx), "M").set_index("series")
+    assert "possible unadjusted split" in rep.loc["A", "warnings"]
+    assert "split" not in rep.loc["M", "warnings"]

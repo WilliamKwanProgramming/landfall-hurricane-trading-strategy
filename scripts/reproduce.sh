@@ -34,6 +34,7 @@ for sc in gaussian garch_t garch_t_event_variance garch_t_cross_correlation; do
 done
 step "$PY" experiments/synthetic_eventstudy.py --scenario garch_t --n-events 35 --n-assets 1 --seed "$SEED"
 step "$PY" experiments/real_eventstudy.py --seed "$SEED"
+step "$PY" experiments/per_stock_power.py --seed "$SEED"
 # The own-prices pipeline on SYNTHETIC prices (no real insurer or futures prices exist here).
 step "$PY" scripts/make_synthetic_prices.py --seed "$SEED"
 step "$PY" scripts/run_own_prices.py --prices data/synthetic/own_prices_synthetic.csv \

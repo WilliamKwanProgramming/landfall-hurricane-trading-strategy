@@ -226,6 +226,47 @@ def test_optimised_reference_and_numpy_agree(case, decay):
     np.testing.assert_allclose(new, old, rtol=1e-9, atol=1e-12)
 
 
+# Degenerate inputs that real storms never produce but a user of the kernels could: a zero radius
+# of maximum wind (the profile is 0/0 at the centre) and points or centres exactly at the pole
+# (the bearing is undefined). Added after an independent review noticed they were not covered.
+_DEGENERATE = ("zero radius of maximum wind", "points exactly at 90N", "centres exactly at 90N")
+
+
+@pytest.mark.parametrize("case", _DEGENERATE)
+@pytest.mark.parametrize("decay", [True, False])
+def test_degenerate_inputs_are_finite_and_all_kernels_agree(case, decay):
+    cpp_module()
+    rng = np.random.default_rng(_DEGENERATE.index(case))
+    n, k = 6, 4
+    node = np.array([0.0, 6.0, 12.0, 24.0])
+    lat0, lon0 = {"zero radius of maximum wind": (27.0, -80.0),
+                  "points exactly at 90N": (88.0, 0.0),
+                  "centres exactly at 90N": (90.0, 0.0)}[case]
+    lat = np.minimum(lat0 + np.cumsum(rng.normal(0, 0.05, (n, k)), axis=1), 90.0)
+    lon = lon0 + np.cumsum(rng.normal(0, 0.05, (n, k)), axis=1)
+    if case == "centres exactly at 90N":
+        lat[:] = 90.0
+    rm = np.zeros(n) if case == "zero radius of maximum wind" else rng.uniform(10, 80, n)
+    s = fp.StormSet(node, lat, lon, rng.uniform(40, 160, (n, k)), rm, rng.uniform(1.0, 2.5, n))
+    if case == "points exactly at 90N":
+        lat_p, lon_p = np.full(8, 90.0), np.linspace(-180.0, 180.0, 8)
+    elif case == "centres exactly at 90N":
+        lat_p, lon_p = rng.uniform(85.0, 90.0, 8), rng.uniform(-180.0, 180.0, 8)
+    else:
+        lat_p, lon_p = rng.uniform(24.0, 31.0, 20), rng.uniform(-91.0, -79.0, 20)
+    ref = fp.max_wind_numpy(s, lat_p, lon_p, GRID, dt_h=0.5, decay=decay)
+    old = fp.max_wind_cpp(s, lat_p, lon_p, GRID, dt_h=0.5, decay=decay, kernel="reference")
+    new = fp.max_wind_cpp(s, lat_p, lon_p, GRID, dt_h=0.5, decay=decay, kernel="optimised")
+    for got in (ref, old, new):
+        assert np.isfinite(got).all() and (got >= 0).all()
+    np.testing.assert_allclose(old, ref, rtol=1e-9, atol=1e-12)
+    np.testing.assert_allclose(new, ref, rtol=1e-9, atol=1e-12)
+    if case == "zero radius of maximum wind":
+        assert (ref == 0.0).all()  # Rm = 0: the symmetric wind and the asymmetry term vanish
+    else:
+        assert (ref > 1.0).any()  # the comparison is not between zeros
+
+
 def test_cpp_kernel_name_is_checked():
     cpp_module()
     s = _storms(2)

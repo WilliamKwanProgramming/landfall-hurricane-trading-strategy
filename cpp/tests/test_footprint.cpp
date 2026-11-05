@@ -129,7 +129,7 @@ void test_max_wind_and_grid() {
 }
 
 
-// The optimised kernel against the wave-1 reference kernel on random storms in four regions:
+// The optimised kernel against the first (reference) kernel on random storms in four regions:
 // anywhere, near the pole, across the date line, and with points at the storm centre.
 void test_optimised_equals_reference() {
   struct Box {

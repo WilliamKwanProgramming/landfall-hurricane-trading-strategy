@@ -100,18 +100,22 @@ def main() -> int:
 
     r2_entries = pl.trigger_entries(probs)
 
-    tabs, dsrs, losos = [], [], []
+    tabs, dsrs, losos, fwds = [], [], [], []
     for name, grid_, fn, prim_cfg in (("R1 calendar (not tradeable)", R1_GRID, r1_entries,
                                        R1_PRIMARY),
                                       ("R2 forecast trigger", R2_GRID, r2_entries, R2_PRIMARY)):
-        t, d, lrow, _ = pl.evaluate_rule(name, grid_, fn, datas, costs, n_years, args.seed,
-                                         prim_cfg)
+        t, d, lrow, _, frow = pl.evaluate_rule(name, grid_, fn, datas, costs, n_years, args.seed,
+                                               prim_cfg)
         tabs.append(t)
         dsrs.append(d)
         losos.append(lrow)
+        fwds.append(frow)
     pd.concat(tabs).to_csv(out / "trading_configs.csv", index=False, float_format="%.6g")
     pd.DataFrame(dsrs).to_csv(out / "trading_dsr.csv", index=False, float_format="%.6g")
     pd.DataFrame(losos).to_csv(out / "trading_loso.csv", index=False, float_format="%.6g")
+    # Added after an independent review of the first run (docs/protocol.md, Deviations): the
+    # forward-only (expanding-window) evaluation; gross-of-cost columns are in the files above.
+    pd.DataFrame(fwds).to_csv(out / "trading_forward.csv", index=False, float_format="%.6g")
     pd.DataFrame([pl.trading_finding(dsrs[1], losos[1])]).to_csv(
         out / "findings_trading.csv", index=False)
 
@@ -156,6 +160,7 @@ def main() -> int:
     print(pd.concat(tabs).to_string())
     print(pd.DataFrame(dsrs).to_string())
     print(pd.DataFrame(losos).to_string())
+    print(pd.DataFrame(fwds).to_string())
     return 0
 
 

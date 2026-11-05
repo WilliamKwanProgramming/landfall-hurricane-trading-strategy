@@ -34,6 +34,9 @@ INF = "src/landfall/study/inference.py"
 FP = "src/landfall/footprint.py"
 PR = "src/landfall/prices.py"
 PL = "src/landfall/pipeline.py"
+BT = "src/landfall/study/backtest.py"
+SIM = "src/landfall/study/simulate.py"
+PW = "src/landfall/study/power.py"
 
 # (name, [(file, text that must occur exactly once, replacement), ...])
 MUTANTS = [
@@ -131,6 +134,20 @@ MUTANTS = [
     ("C6 optimised C++ kernel: per-point latitude sine taken from the half angle", [
         ("cpp/src/footprint.cpp", "    sp[p] = std::sin(phi);",
          "    sp[p] = std::sin(0.5 * phi);")]),
+    ("R1 forward-only selection also looks at the season it trades", [
+        (BT, "earlier = results[n][results[n][season_col] < s][value].dropna()",
+         "earlier = results[n][results[n][season_col] <= s][value].dropna()")]),
+    ("R2 gross-return statistics computed from the net return", [
+        (PL, 'g = evt["gross"].to_numpy()', 'g = evt["net"].to_numpy()')]),
+    ("R3 split check with zero tolerance (an adjusted split ratio is never matched)", [
+        (PR, "SPLIT_TOL = 0.03", "SPLIT_TOL = 0.0")]),
+    ("R4 simulator ignores the requested residual volatility", [
+        (SIM, "e = noise((n_reps, n_events, n_assets, length), sigma_e, sc, rng)",
+         "e = noise((n_reps, n_events, n_assets, length), SIGMA_E, sc, rng)")]),
+    ("R5 power curve does not pass its residual volatility to the simulator", [
+        (PW, "n_boot=0, sigma_e=sigma)", "n_boot=0)")]),
+    ("R6 plug-in t-test power uses n instead of n - 1 degrees of freedom for the critical value", [
+        (PW, "tc = stats.t.ppf(0.975, n - 1)", "tc = stats.t.ppf(0.975, n)")]),
 ]
 
 

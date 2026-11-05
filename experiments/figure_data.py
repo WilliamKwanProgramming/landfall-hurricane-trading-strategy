@@ -2,7 +2,7 @@
 """Data for the README figures that no other experiment writes (scripts/make_figures.py plots).
 
 1. Mean CAR by event day, days -5 .. t for t = -5 .. +10, of the pooled signed storm-relevant
-   stocks and the pooled controls of the wave-1 study (docs/protocol.md, primary events; real
+   stocks and the pooled controls of the eight-stock study (docs/protocol.md, primary events; real
    data), with 95% stationary-bootstrap intervals (2,000 resamples, mean block 4 asset-events in
    event order, as the pooled test). Descriptive: the protocol's tests are in
    results/real_eventstudy/.

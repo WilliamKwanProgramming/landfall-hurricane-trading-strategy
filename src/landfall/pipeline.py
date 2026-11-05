@@ -1,6 +1,6 @@
 """The event-study and trading pipeline of docs/protocol.md, for any list of assets.
 
-Used by experiments/real_eventstudy.py (wave 1: eight stocks on one calendar) and by
+Used by experiments/real_eventstudy.py (eight stocks on one calendar) and by
 scripts/run_own_prices.py (docs/protocol_own_prices.md: the user's insurer, reinsurer and futures
 prices, each asset on its own calendar). Every asset carries its own dates, returns and the
 market's returns on those dates (`AssetData`); events are given as times and mapped to each
@@ -263,9 +263,11 @@ def costs_for(asset: Asset, costs: bt.Costs) -> bt.Costs:
 
 
 def event_table(trades: pd.DataFrame) -> pd.DataFrame:
-    """Mean net return per event (over the assets traded on it)."""
+    """Mean net (and gross, before costs) return per event: the mean over the assets traded on
+    it. An event is one storm (`signals.first_triggers` gives one entry per storm and rule)."""
     t = trades.dropna(subset=["net"])
-    return t.groupby(["event", "season"], as_index=False)["net"].mean()
+    cols = [c for c in ("net", "gross") if c in t.columns]
+    return t.groupby(["event", "season"], as_index=False)[cols].mean()
 
 
 def metrics(evt: pd.DataFrame, n_years: int, seed: int) -> dict:
@@ -275,10 +277,15 @@ def metrics(evt: pd.DataFrame, n_years: int, seed: int) -> dict:
     lo, hi = bs.bootstrap_mean_ci(x, 2.0, 2000, seed)
     sr = sh.sharpe(x)
     g3, g4 = sh.moments(x)
-    return {"events": len(x), "mean_net": x.mean(), "boot_lo": lo, "boot_hi": hi,
-            "hit_rate": float((x > 0).mean()), "sharpe_per_event": sr,
-            "sharpe_annualised": sh.annualise(sr, len(x) / n_years), "skew": g3, "kurt": g4,
-            "psr_vs_0": sh.psr(sr, len(x), g3, g4)}
+    out = {"events": len(x), "mean_net": x.mean(), "boot_lo": lo, "boot_hi": hi,
+           "hit_rate": float((x > 0).mean()), "sharpe_per_event": sr,
+           "sharpe_annualised": sh.annualise(sr, len(x) / n_years), "skew": g3, "kurt": g4,
+           "psr_vs_0": sh.psr(sr, len(x), g3, g4)}
+    if "gross" in evt.columns:  # the same events before costs (costs are an assumption)
+        g = evt["gross"].to_numpy()
+        glo, ghi = bs.bootstrap_mean_ci(g, 2.0, 2000, seed)
+        out.update({"mean_gross": float(g.mean()), "gross_lo": glo, "gross_hi": ghi})
+    return out
 
 
 def trades_for(datas: list[AssetData], cfg: object, entries_for: Entries, costs: bt.Costs
@@ -313,16 +320,25 @@ def trades_for(datas: list[AssetData], cfg: object, entries_for: Entries, costs:
         parts.append(pd.concat([t[["event", "season", "entry_date"]], res], axis=1)
                      .assign(asset=a.name))
     if not parts:
-        return pd.DataFrame(columns=["event", "season", "entry_date", "asset", "net"])
+        return pd.DataFrame(columns=["event", "season", "entry_date", "asset", "gross", "cost",
+                                     "net"])
     out = pd.concat(parts, ignore_index=True)
     return out.sort_values(["entry_date", "asset"], kind="stable").reset_index(drop=True)
 
 
 def evaluate_rule(name: str, configs: list, entries_for: Entries, datas: list[AssetData],
                   costs: bt.Costs, n_years: int, seed: int, primary: object,
-                  trials_multiplier: int = 1) -> tuple[pd.DataFrame, dict, dict, dict]:
+                  trials_multiplier: int = 1
+                  ) -> tuple[pd.DataFrame, dict, dict, dict, dict]:
     """Metrics per configuration, the deflated Sharpe ratio of the best one (N = number of
-    configurations x `trials_multiplier`) and the leave-one-season-out evaluation."""
+    configurations x `trials_multiplier`), the leave-one-season-out evaluation (the pre-specified
+    one: cross-validation over seasons) and a forward-only evaluation (expanding window: each
+    season is traded with the configuration that was best on earlier seasons only).
+
+    The DSR picks the best configuration by Sharpe ratio, the two evaluations choose by mean net
+    return per event. `var_sr_trials` is the variance of the Sharpe ratios of the configurations,
+    which share most of their trades, so it is small and N overstates the independent trials.
+    """
     tables, rows = {}, []
     for cfg in configs:
         evt = event_table(trades_for(datas, cfg, entries_for, costs))
@@ -332,7 +348,7 @@ def evaluate_rule(name: str, configs: list, entries_for: Entries, datas: list[As
     table = pd.DataFrame(rows)
     if "sharpe_per_event" not in table.columns or table["sharpe_per_event"].isna().all():
         return table, {"rule": name, "n_trials": len(configs) * trials_multiplier}, \
-            {"rule": name, "events": 0}, tables
+            {"rule": name, "events": 0}, tables, {"rule": name, "events": 0}
     srs = table["sharpe_per_event"].to_numpy(dtype=float)
     best = int(np.nanargmax(srs))
     bevt = tables[table.loc[best, "config"]]["net"].to_numpy()
@@ -347,7 +363,10 @@ def evaluate_rule(name: str, configs: list, entries_for: Entries, datas: list[As
     loso = bt.leave_one_season_out(tables)
     lrow = {"rule": name, **metrics(loso, n_years, seed),
             "configs_chosen": json.dumps(loso.groupby("season")["config"].first().to_dict())}
-    return table, dsr, lrow, tables
+    fwd = bt.forward_selection(tables, str(primary))
+    frow = {"rule": name, **metrics(fwd, n_years, seed),
+            "configs_chosen": json.dumps(fwd.groupby("season")["config"].first().to_dict())}
+    return table, dsr, lrow, tables, frow
 
 
 def trading_finding(dsr: dict, loso: dict) -> dict:

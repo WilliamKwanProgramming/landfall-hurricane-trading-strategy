@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 from scipy import stats
 
+from landfall import pipeline as pl
 from landfall.study import backtest as bt
 from landfall.study import bootstrap as bs
 from landfall.study import eventstudy as es
@@ -265,3 +266,39 @@ def test_leave_one_season_out_selects_on_other_seasons():
     # Held-out 2: A (5+5+0)/3 = 3.3, B (-10+9)/2 = -0.5 -> A. Held-out 3: A 2.0, B -4.5 -> A.
     assert chosen == {1: "B", 2: "A", 3: "A"}
     assert out[out.season == 1]["net"].tolist() == [-10.0]
+
+
+def test_forward_selection_uses_only_earlier_seasons():
+    a = pd.DataFrame({"season": [1, 1, 2, 2, 3], "net": [5.0, 5.0, -1.0, -1.0, 0.0]})
+    b = pd.DataFrame({"season": [1, 2, 3], "net": [-10.0, 1.0, 9.0]})
+    out = bt.forward_selection({"A": a, "B": b}, primary="B")
+    chosen = out.groupby("season")["config"].first().to_dict()
+    # Season 1: nothing earlier, so the primary B. Season 2: A scores 5, B -10 -> A.
+    # Season 3: A scores (5+5-1-1)/4 = 2, B (-10+1)/2 = -4.5 -> A.
+    assert chosen == {1: "B", 2: "A", 3: "A"}
+    assert out[out.season == 1]["net"].tolist() == [-10.0]
+    # No look-ahead: changing the last season's results cannot change an earlier choice, while
+    # leave-one-season-out (which also selects on later seasons) does change.
+    b2 = b.copy()
+    b2.loc[b2.season == 3, "net"] = 1000.0
+    out2 = bt.forward_selection({"A": a, "B": b2}, primary="B")
+    assert out2.groupby("season")["config"].first().to_dict() == {1: "B", 2: "A", 3: "A"}
+    loso_a = bt.leave_one_season_out({"A": a, "B": b}).groupby("season")["config"].first()
+    loso_b = bt.leave_one_season_out({"A": a, "B": b2}).groupby("season")["config"].first()
+    assert loso_a[2] == "A" and loso_b[2] == "B"  # season 2's choice depends on season 3
+
+
+def test_event_table_and_metrics_carry_the_gross_return():
+    trades = pd.DataFrame({
+        "event": ["x", "x", "y", "y", "z"], "season": [1, 1, 2, 2, 3],
+        "gross": [0.010, 0.030, -0.020, 0.000, 0.005],
+        "cost": [0.002, 0.002, 0.002, 0.002, 0.002],
+        "net": [0.008, 0.028, -0.022, -0.002, 0.003]})
+    evt = pl.event_table(trades)
+    assert evt["event"].tolist() == ["x", "y", "z"]
+    np.testing.assert_allclose(evt["gross"], [0.020, -0.010, 0.005])
+    np.testing.assert_allclose(evt["net"], evt["gross"] - 0.002)
+    m = pl.metrics(evt, n_years=10, seed=1)
+    assert m["mean_gross"] == pytest.approx(evt["gross"].mean(), rel=1e-12)
+    assert m["mean_gross"] - m["mean_net"] == pytest.approx(0.002, rel=1e-9)
+    assert m["gross_lo"] <= m["mean_gross"] <= m["gross_hi"]

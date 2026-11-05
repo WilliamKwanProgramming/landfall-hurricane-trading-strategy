@@ -8,8 +8,8 @@ warm-up run of each engine, the three engines run interleaved (NumPy, reference,
 minimum and maximum wall time per engine and three ratios of medians, with the range of the ratio
 (slowest over fastest run and fastest over slowest). Everything is single-threaded. The 1-minute
 load average before and after is recorded: the machine may be shared, so the timings are
-indicative. Writes results/benchmark/ (results/benchmark/wave1/ holds the first measurement,
-made with the wave-1 version of this script at commit fde66f1).
+indicative. Writes results/benchmark/ (results/benchmark/first_run/ holds the first measurement,
+made with the first version of this script at commit fde66f1).
 
 Usage: python experiments/benchmark_footprint.py [--reps 15] [--seed 20261105]
            [--wait-load 1.3 --wait-minutes 10]
@@ -33,12 +33,12 @@ from landfall.provenance import results_dir, write_manifest
 
 ENGINES = {
     "numpy": fp.max_wind_numpy,
-    "cpp reference (wave-1 kernel)": lambda *a: fp.max_wind_cpp(*a, kernel="reference"),
+    "cpp reference (first kernel)": lambda *a: fp.max_wind_cpp(*a, kernel="reference"),
     "cpp optimised": lambda *a: fp.max_wind_cpp(*a, kernel="optimised"),
 }
 RATIOS = [("numpy / cpp optimised", "numpy", "cpp optimised"),
-          ("cpp reference / cpp optimised", "cpp reference (wave-1 kernel)", "cpp optimised"),
-          ("numpy / cpp reference", "numpy", "cpp reference (wave-1 kernel)")]
+          ("cpp reference / cpp optimised", "cpp reference (first kernel)", "cpp optimised"),
+          ("numpy / cpp reference", "numpy", "cpp reference (first kernel)")]
 
 
 def load1() -> float:

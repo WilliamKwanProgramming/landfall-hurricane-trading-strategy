@@ -58,7 +58,7 @@ def run(tmp_path_factory):
 def test_every_output_is_labelled_synthetic(run):
     out = run[0]
     csvs = sorted(out.glob("*.csv"))
-    assert len(csvs) == 13
+    assert len(csvs) == 14 and (out / "trading_forward.csv").exists()
     for f in csvs:
         d = pd.read_csv(f)
         assert list(d.columns)[0] == "data" and (d["data"] == "synthetic").all(), f.name

@@ -18,7 +18,9 @@ with beta_i ~ U(0.5, 1.5). Scenarios (`SCENARIOS`):
   that the market model does not remove: e_it = sqrt(rho) f_t + sqrt(1 - rho) u_it with rho = 0.3,
   f and u independent GARCH-t series.
 
-The injected abnormal return adds exactly delta to CAR[0, +10] of every asset-event.
+The injected abnormal return adds exactly delta to CAR[0, +10] of every asset-event. The residual
+sd of the stocks (sigma_e, 2% a day above) can be set per call (`sigma_e`): experiments/
+per_stock_power.py uses each real stock's own residual sd.
 """
 
 from __future__ import annotations
@@ -76,7 +78,8 @@ def noise(shape: tuple[int, ...], sigma: float, sc: Scenario, rng: np.random.Gen
 
 def simulate_panel(sc: Scenario, n_events: int, n_assets: int, delta: float,
                    rng: np.random.Generator, n_reps: int = 1, est_len: int = es.EST_LEN,
-                   gap: int = es.GAP, window: tuple[int, int] = es.WINDOW) -> tuple[NDArray, ...]:
+                   gap: int = es.GAP, window: tuple[int, int] = es.WINDOW,
+                   sigma_e: float = SIGMA_E) -> tuple[NDArray, ...]:
     """Simulate `n_reps` independent panels at once.
 
     Returns est_r, est_m (n_reps, M, est_len), win_r, win_m (n_reps, M, W) with asset-events in
@@ -86,9 +89,9 @@ def simulate_panel(sc: Scenario, n_events: int, n_assets: int, delta: float,
     length = est_len + gap + w
     day0 = est_len + gap - window[0]
     m = noise((n_reps, n_events, length), SIGMA_M, sc, rng)
-    e = noise((n_reps, n_events, n_assets, length), SIGMA_E, sc, rng)
+    e = noise((n_reps, n_events, n_assets, length), sigma_e, sc, rng)
     if sc.xcorr > 0:
-        f = noise((n_reps, n_events, 1, length), SIGMA_E, sc, rng)
+        f = noise((n_reps, n_events, 1, length), sigma_e, sc, rng)
         e = np.sqrt(sc.xcorr) * f + np.sqrt(1 - sc.xcorr) * e
     post = slice(day0, day0 + 11)
     e[..., post] *= sc.event_sd_mult
@@ -108,14 +111,15 @@ TESTS = ("naive_t", "patell", "bmp", "bmp_kp", "rank")
 
 def replicate(sc: Scenario, n_events: int, n_assets: int, delta: float,
               rng: np.random.Generator, n_reps: int = 1, n_boot: int = 499,
-              window: tuple[int, int] = (0, 10)) -> list[dict]:
+              window: tuple[int, int] = (0, 10), sigma_e: float = SIGMA_E) -> list[dict]:
     """`n_reps` replications: estimate, p-values of every test and interval coverage of delta.
 
     The bootstrap is the stationary bootstrap over asset-events in event-major order with mean
-    block length n_assets (the stocks of one event tend to fall in one block).
+    block length n_assets (the stocks of one event tend to fall in one block). With
+    `n_boot = 0` no bootstrap is drawn and `boot_cover` is NaN (power experiments).
     """
     est_r, est_m, win_r, win_m, groups = simulate_panel(sc, n_events, n_assets, delta, rng,
-                                                        n_reps)
+                                                        n_reps, sigma_e=sigma_e)
     big = es.fit_market_model(*(a.reshape(-1, a.shape[-1]) for a in (est_r, est_m, win_r,
                                                                        win_m)))
     n_ae = est_r.shape[1]
@@ -133,9 +137,12 @@ def replicate(sc: Scenario, n_events: int, n_assets: int, delta: float,
             "rank": inf.rank_test(resid, big.ar[rows], cols).p,
         }
         lo, hi = inf.t_interval(car)
-        idx = bs.stationary_indices(car.size, float(n_assets), n_boot, rng)
-        blo, bhi = np.quantile(car[idx].mean(axis=1), [0.025, 0.975])
+        boot_cover = float("nan")
+        if n_boot > 0:
+            idx = bs.stationary_indices(car.size, float(n_assets), n_boot, rng)
+            blo, bhi = np.quantile(car[idx].mean(axis=1), [0.025, 0.975])
+            boot_cover = blo <= delta <= bhi
         out.append({"estimate": float(car.mean()), "rbar": rbar,
                     **{f"p_{t}": v for t, v in p.items()},
-                    "t_cover": lo <= delta <= hi, "boot_cover": blo <= delta <= bhi})
+                    "t_cover": lo <= delta <= hi, "boot_cover": boot_cover})
     return out

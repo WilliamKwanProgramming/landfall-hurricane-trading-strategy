@@ -104,3 +104,28 @@ def leave_one_season_out(results: dict[str, pd.DataFrame], season_col: str = "se
         held["config"] = best
         parts.append(held)
     return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
+
+
+def forward_selection(results: dict[str, pd.DataFrame], primary: str,
+                      season_col: str = "season", value: str = "net") -> pd.DataFrame:
+    """Expanding-window selection: no later season influences a choice.
+
+    For each season, the configuration with the highest mean `value` over the trades of strictly
+    earlier seasons is chosen (ties: earliest in the order of `results`) and its trades of that
+    season are returned. In a season with no earlier trade in any configuration (the first one),
+    the `primary` configuration is used. Compare `leave_one_season_out`, which also uses later
+    seasons and is therefore cross-validation, not a forecast made in time.
+    """
+    names = list(results)
+    seasons = sorted(set().union(*[set(df[season_col]) for df in results.values()]))
+    parts = []
+    for s in seasons:
+        scores = []
+        for n in names:
+            earlier = results[n][results[n][season_col] < s][value].dropna()
+            scores.append(earlier.mean() if len(earlier) else -np.inf)
+        best = names[int(np.argmax(scores))] if np.isfinite(max(scores)) else primary
+        held = results[best][results[best][season_col] == s].copy()
+        held["config"] = best
+        parts.append(held)
+    return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
