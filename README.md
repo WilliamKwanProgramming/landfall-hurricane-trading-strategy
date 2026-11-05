@@ -260,6 +260,33 @@ borrow); doubling them (`results/real_eventstudy/sensitivity_costs.csv`) makes b
 <!-- /table:benchmark -->
 
 <!-- table:mutation -->
+**Mutation check of the test suite (tests/mutation_check.py)**
+
+| mutant | result |
+|---|---|
+| M1 estimation window overlaps the event window (no 30-day gap) | caught |
+| M2 off-by-one in the event-day index | caught |
+| M3 abnormal return with the wrong sign | caught |
+| M4 forecast features use the position 12/24 h after t instead of before | caught |
+| M5 training seasons include the test season | caught |
+| M6 residual variance with T - 1 instead of T - 2 degrees of freedom | caught |
+| M7 bootstrap block length ignored (always i.i.d.) | caught |
+| M8 trading cost charged once instead of on entry and exit | caught |
+| M9 Sharpe annualised with k instead of sqrt(k) | caught |
+| M10 deflated Sharpe ratio ignores the number of trials | caught |
+| M11 inland decay starts 6 h before landfall (NumPy) | caught |
+| M12 Holland profile uses exponent 1/B instead of B | caught |
+| M13 Kolari-Pynnonen factor without the (N - 1) term | caught |
+| M14 rank test centred at L/2 instead of (L + 1)/2 | caught |
+| M15 Holm replaced by Bonferroni | caught |
+| M16 forecast public at its synoptic time (availability delay ignored) | caught |
+| M17 placebo dates not kept away from landfalls | caught |
+| M18 HURDAT2 west longitudes read as east | caught |
+| M19 translation asymmetry factor k(Rm) = 1 instead of 1/2 (NumPy) | caught |
+| C1 C++ kernel | inland decay rate 0.95 / h instead of 0.095 / h |
+| C2 C++ kernel | wind direction clockwise (southern-hemisphere rotation) |
+
+21 of 21 mutants caught.
 <!-- /table:mutation -->
 
 ## Reproduce

@@ -1,8 +1,8 @@
-command: python experiments/forecast_skill.py
+command: python experiments/forecast_skill.py --seed 20261105
 seed: 20261105
-git_commit: 066a87a4031663be75ddf853119f4f4f243d5e63
-working_tree: clean
-date_utc: 2026-11-05T07:02:51Z
+git_commit: c4360bf86ba44948b933a0038057734d5537eb3e
+working_tree: clean code
+date_utc: 2026-11-05T08:04:18Z
 python: 3.13.18
 numpy: 2.5.3
 machine: x86_64 Linux 6.18.44-fc-v236
