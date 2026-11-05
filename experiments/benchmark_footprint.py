@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Speed of the footprint Monte Carlo: C++ kernel vs NumPy reference, on identical inputs.
+"""Speed of the footprint Monte Carlo: NumPy, the reference C++ kernel and the optimised kernel.
 
-Synthetic inputs: 500 sampled storms (7 nodes over 120 h, 0.5 h steps), 50 exposure points
-on the US Gulf coast, the North Atlantic land mask coarsened to 0.05 degree. Each engine is timed
-`--reps` times (after one warm-up run); reported: median, minimum and maximum wall time and the
-ratio of medians. The 1-minute load average before and after is recorded, because timings are
-only meaningful on a quiet machine. Writes results/benchmark/.
+Synthetic inputs: 500 sampled storms (7 nodes over 120 h, 0.5 h steps, so 241 steps), 50 exposure
+points on the US Gulf coast, the North Atlantic land mask coarsened to 0.05 degree. After one
+warm-up run of each engine, the three engines run interleaved (NumPy, reference, optimised) for
+`--reps` repetitions, so that a change in machine load affects all three alike. Reported: median,
+minimum and maximum wall time per engine and three ratios of medians, with the range of the ratio
+(slowest over fastest run and fastest over slowest). Everything is single-threaded. The 1-minute
+load average before and after is recorded: the machine may be shared, so the timings are
+indicative. Writes results/benchmark/ (results/benchmark/wave1/ holds the first measurement,
+made with the wave-1 version of this script at commit fde66f1).
 
 Usage: python experiments/benchmark_footprint.py [--reps 15] [--seed 20261105]
 """
@@ -23,6 +27,15 @@ import pandas as pd
 from landfall import footprint as fp
 from landfall.geo import atlantic_land_grid
 from landfall.provenance import results_dir, write_manifest
+
+ENGINES = {
+    "numpy": fp.max_wind_numpy,
+    "cpp reference (wave-1 kernel)": lambda *a: fp.max_wind_cpp(*a, kernel="reference"),
+    "cpp optimised": lambda *a: fp.max_wind_cpp(*a, kernel="optimised"),
+}
+RATIOS = [("numpy / cpp optimised", "numpy", "cpp optimised"),
+          ("cpp reference / cpp optimised", "cpp reference (wave-1 kernel)", "cpp optimised"),
+          ("numpy / cpp reference", "numpy", "cpp reference (wave-1 kernel)")]
 
 
 def load1() -> float:
@@ -45,38 +58,51 @@ def main() -> int:
     lat_p = rng.uniform(26, 31, 50)
     lon_p = rng.uniform(-97, -82, 50)
     grid = atlantic_land_grid(coarsen=6)
+    inputs = (storms, lat_p, lon_p, grid)
 
-    a = fp.max_wind_numpy(storms, lat_p, lon_p, grid)
-    b = fp.max_wind_cpp(storms, lat_p, lon_p, grid)
-    max_rel = float(np.max(np.abs(a - b) / np.maximum(np.abs(a), 1e-12)))
+    results = {name: f(*inputs) for name, f in ENGINES.items()}  # warm-up and accuracy
+    ref = results["numpy"]
+    max_rel = {name: float(np.max(np.abs(r - ref) / np.maximum(np.abs(ref), 1e-12)))
+               for name, r in results.items() if name != "numpy"}
 
     load_before = load1()
-    times = {"numpy": [], "cpp": []}
+    times: dict[str, list[float]] = {name: [] for name in ENGINES}
     for _ in range(args.reps):
-        for name, f in (("numpy", fp.max_wind_numpy), ("cpp", fp.max_wind_cpp)):
+        for name, f in ENGINES.items():
             t0 = time.perf_counter()
-            f(storms, lat_p, lon_p, grid)
+            f(*inputs)
             times[name].append(time.perf_counter() - t0)
     load_after = load1()
+
+    steps = int(round((node[-1] - node[0]) / 0.5)) + 1
+    evals = n * steps * lat_p.size
     rows = []
     for name, t in times.items():
-        rows.append({"engine": name, "reps": args.reps, "median_s": f"{np.median(t):.4f}",
-                     "min_s": f"{np.min(t):.4f}", "max_s": f"{np.max(t):.4f}"})
-    ratio = np.median(times["numpy"]) / np.median(times["cpp"])
-    lo = np.min(times["numpy"]) / np.max(times["cpp"])
-    hi = np.max(times["numpy"]) / np.min(times["cpp"])
-    rows.append({"engine": "ratio numpy/cpp", "reps": args.reps, "median_s": f"{ratio:.1f}",
-                 "min_s": f"{lo:.1f}", "max_s": f"{hi:.1f}"})
+        rows.append({"engine": name, "reps": args.reps, "median_s": f"{np.median(t):.3f}",
+                     "min_s": f"{np.min(t):.3f}", "max_s": f"{np.max(t):.3f}",
+                     "ns_per_evaluation": f"{np.median(t) / evals * 1e9:.0f}"})
+    for label, a, b in RATIOS:
+        ta, tb = times[a], times[b]
+        rows.append({"engine": f"ratio {label}", "reps": args.reps,
+                     "median_s": f"{np.median(ta) / np.median(tb):.1f}",
+                     "min_s": f"{np.min(ta) / np.max(tb):.1f}",
+                     "max_s": f"{np.max(ta) / np.min(tb):.1f}", "ns_per_evaluation": ""})
     out = results_dir("benchmark")
     df = pd.DataFrame(rows)
     df.to_csv(out / "footprint_speed.csv", index=False)
     write_manifest(out, args.seed, {
-        "inputs": f"synthetic: {n} storms x 241 steps x 50 points", "threads": "1 (both)",
+        "inputs": f"synthetic: {n} storms x {steps} steps x {lat_p.size} points = {evals} "
+                  "wind evaluations per run",
+        "order": "interleaved per repetition: numpy, cpp reference, cpp optimised",
+        "threads": "1 (all engines; OMP/OpenBLAS threads set to 1 by the caller)",
         "load1_before": f"{load_before:.2f}", "load1_after": f"{load_after:.2f}",
-        "max_relative_difference_cpp_vs_numpy": f"{max_rel:.2e}",
+        "max_relative_difference_vs_numpy": "; ".join(f"{k}: {v:.2e}"
+                                                      for k, v in max_rel.items()),
+        "ratio_columns": "median_s = ratio of medians; min_s = min(a)/max(b); "
+                         "max_s = max(a)/min(b)",
         "cpu_count": os.cpu_count()})
     print(df.to_string())
-    print(f"load {load_before:.2f} -> {load_after:.2f}, max rel diff {max_rel:.2e}")
+    print(f"load {load_before:.2f} -> {load_after:.2f}, max rel diff {max_rel}")
     return 0
 
 

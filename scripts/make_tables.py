@@ -172,9 +172,19 @@ def main() -> int:
 
     bench = R / "benchmark" / "footprint_speed.csv"
     if bench.exists():
+        new = pd.read_csv(bench, dtype=str, keep_default_na=False)
+        new.insert(0, "measurement", "wave 2")
+        old = pd.read_csv(R / "benchmark" / "wave1" / "footprint_speed.csv", dtype=str)
+        old["engine"] = old["engine"].replace({"cpp": "cpp (wave-1 kernel)",
+                                               "ratio numpy/cpp": "ratio numpy / cpp (wave-1)"})
+        old.insert(0, "measurement", "wave 1")
+        old["ns_per_evaluation"] = ""
+        df = pd.concat([old, new], ignore_index=True)
+        df.columns = ["measurement", "engine", "reps", "median (s)", "min (s)", "max (s)",
+                      "ns per wind evaluation"]
         add("benchmark",
-            "Footprint Monte Carlo speed, C++ vs NumPy (synthetic inputs)",
-            pd.read_csv(bench))
+            "Footprint Monte Carlo speed, 500 storms x 241 steps x 50 points, single thread, "
+            "shared machine, indicative (synthetic inputs)", df)
 
     mut = R / "mutation_check.txt"
     if mut.exists():
