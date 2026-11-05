@@ -1,0 +1,12 @@
+command: python experiments/synthetic_eventstudy.py --scenario garch_t_event_variance
+seed: 20261105
+git_commit: ad85a5113386e86a9b25bd10f122a397c0f68d0c
+working_tree: modified (uncommitted changes to tracked files)
+date_utc: 2026-11-05T07:12:09Z
+python: 3.13.18
+numpy: 2.5.3
+machine: x86_64 Linux 6.18.44-fc-v236
+data: synthetic (landfall.study.simulate)
+scenario: garch_t_event_variance
+design: 30 events x 4 stocks, window [0,+10]
+rng: numpy default_rng([seed, scenario index, delta index])

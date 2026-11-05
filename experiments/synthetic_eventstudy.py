@@ -10,6 +10,8 @@ otherwise), and coverage of the 95% t interval and of the stationary-bootstrap i
 sd / sqrt(reps) for the bias.
 
 Usage: python experiments/synthetic_eventstudy.py --scenario garch_t [--reps 2000] [--seed N]
+       [--n-events 30 --n-assets 4]
+Non-default panel sizes are written to <scenario>_<events>x<assets>.csv.
 """
 
 from __future__ import annotations
@@ -49,22 +51,26 @@ def main() -> int:
     ap.add_argument("--scenario", required=True, choices=sorted(sim.SCENARIOS))
     ap.add_argument("--reps", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=20261105)
+    ap.add_argument("--n-events", type=int, default=N_EVENTS)
+    ap.add_argument("--n-assets", type=int, default=N_ASSETS)
     args = ap.parse_args()
+    default = (args.n_events, args.n_assets) == (N_EVENTS, N_ASSETS)
+    name = args.scenario if default else f"{args.scenario}_{args.n_events}x{args.n_assets}"
     sc = sim.SCENARIOS[args.scenario]
     rows = []
     for k, delta in enumerate(DELTAS):
         rng = np.random.default_rng([args.seed, sorted(sim.SCENARIOS).index(args.scenario), k])
         res = []
         while len(res) < args.reps:
-            res += sim.replicate(sc, N_EVENTS, N_ASSETS, delta, rng,
+            res += sim.replicate(sc, args.n_events, args.n_assets, delta, rng,
                                  n_reps=min(BATCH, args.reps - len(res)))
         rows.append(summarise(pd.DataFrame(res), delta))
     out = results_dir("synthetic_eventstudy")
     table = pd.DataFrame(rows)
-    table.to_csv(out / f"{args.scenario}.csv", index=False, float_format="%.5f")
-    write_manifest(out / "manifests" / args.scenario, args.seed, {
+    table.to_csv(out / f"{name}.csv", index=False, float_format="%.5f")
+    write_manifest(out / "manifests" / name, args.seed, {
         "data": "synthetic (landfall.study.simulate)", "scenario": args.scenario,
-        "design": f"{N_EVENTS} events x {N_ASSETS} stocks, window [0,+10]",
+        "design": f"{args.n_events} events x {args.n_assets} stocks, window [0,+10]",
         "rng": "numpy default_rng([seed, scenario index, delta index])"})
     print(table.to_string())
     return 0
