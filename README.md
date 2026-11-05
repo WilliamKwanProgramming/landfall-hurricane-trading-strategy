@@ -37,21 +37,9 @@ the command, seed, commit and environment.
 <!-- table:mirrors -->
 **Mirror comparison, HURDAT2 1975-2019 (real data)**
 
-| quantity | value |
-|---|---|
-| storms_rda | 721 |
-| storms_dplyr | 588 |
-| storms_both | 588 |
-| storms_only_rda | 133 |
-| storms_only_rda_all_pressure_missing | 114 |
-| storms_only_rda_no_td_ts_hu | 19 |
-| fixes_dplyr | 17199 |
-| fixes_matched | 17199 |
-| diff_lat | 0 |
-| diff_lon | 1 |
-| diff_vmax_kt | 39 |
-| diff_mslp_mb | 1 |
-| diff_status | 5 |
+| storms rda | storms dplyr | only in rda: no pressure / never TD-HU | dplyr fixes matched | differing lat / lon / wind / pressure / status |
+|---|---|---|---|---|
+| 721 | 588 | 114 / 19 | 17199 of 17199 | 0 / 1 / 39 / 1 / 5 |
 <!-- /table:mirrors -->
 
 Reading: every fix of the dplyr mirror matches a fix of the rda mirror; the storms missing from
@@ -171,7 +159,7 @@ Patell test rejects a true null 37% of the time while BMP stays at 5%; with cros
 returns of stocks that share an event date, the naive, Patell and BMP tests reject 16-18% of the
 time while the Kolari-Pynnonen adjustment and the rank test stay near 5%. The rank test
 over-rejects under event-induced variance (10%). The stationary-bootstrap interval under-covers
-slightly (about 93% for a nominal 95%). Not shown: other sources of misspecification (for
+slightly (92-93% for a nominal 95%). Not shown: other sources of misspecification (for
 example a wrong market model or thin trading).
 
 <!-- table:synthetic_power -->
@@ -260,33 +248,9 @@ borrow); doubling them (`results/real_eventstudy/sensitivity_costs.csv`) makes b
 <!-- /table:benchmark -->
 
 <!-- table:mutation -->
-**Mutation check of the test suite (tests/mutation_check.py)**
+**Mutation check of the test suite (tests/mutation_check.py): 21 of 21 mutants caught.**
 
-| mutant | result |
-|---|---|
-| M1 estimation window overlaps the event window (no 30-day gap) | caught |
-| M2 off-by-one in the event-day index | caught |
-| M3 abnormal return with the wrong sign | caught |
-| M4 forecast features use the position 12/24 h after t instead of before | caught |
-| M5 training seasons include the test season | caught |
-| M6 residual variance with T - 1 instead of T - 2 degrees of freedom | caught |
-| M7 bootstrap block length ignored (always i.i.d.) | caught |
-| M8 trading cost charged once instead of on entry and exit | caught |
-| M9 Sharpe annualised with k instead of sqrt(k) | caught |
-| M10 deflated Sharpe ratio ignores the number of trials | caught |
-| M11 inland decay starts 6 h before landfall (NumPy) | caught |
-| M12 Holland profile uses exponent 1/B instead of B | caught |
-| M13 Kolari-Pynnonen factor without the (N - 1) term | caught |
-| M14 rank test centred at L/2 instead of (L + 1)/2 | caught |
-| M15 Holm replaced by Bonferroni | caught |
-| M16 forecast public at its synoptic time (availability delay ignored) | caught |
-| M17 placebo dates not kept away from landfalls | caught |
-| M18 HURDAT2 west longitudes read as east | caught |
-| M19 translation asymmetry factor k(Rm) = 1 instead of 1/2 (NumPy) | caught |
-| C1 C++ kernel | inland decay rate 0.95 / h instead of 0.095 / h |
-| C2 C++ kernel | wind direction clockwise (southern-hemisphere rotation) |
-
-21 of 21 mutants caught.
+M1 estimation window overlaps the event window (no 30-day gap); M2 off-by-one in the event-day index; M3 abnormal return with the wrong sign; M4 forecast features use the position 12/24 h after t instead of before; M5 training seasons include the test season; M6 residual variance with T - 1 instead of T - 2 degrees of freedom; M7 bootstrap block length ignored (always i.i.d.); M8 trading cost charged once instead of on entry and exit; M9 Sharpe annualised with k instead of sqrt(k); M10 deflated Sharpe ratio ignores the number of trials; M11 inland decay starts 6 h before landfall (NumPy); M12 Holland profile uses exponent 1/B instead of B; M13 Kolari-Pynnonen factor without the (N - 1) term; M14 rank test centred at L/2 instead of (L + 1)/2; M15 Holm replaced by Bonferroni; M16 forecast public at its synoptic time (availability delay ignored); M17 placebo dates not kept away from landfalls; M18 HURDAT2 west longitudes read as east; M19 translation asymmetry factor k(Rm) = 1 instead of 1/2 (NumPy); C1 C++ kernel: inland decay rate 0.95 / h instead of 0.095 / h; C2 C++ kernel: wind direction clockwise (southern-hemisphere rotation).
 <!-- /table:mutation -->
 
 ## Reproduce
