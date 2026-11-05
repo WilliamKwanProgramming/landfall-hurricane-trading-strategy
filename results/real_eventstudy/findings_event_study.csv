@@ -1,0 +1,10 @@
+series,bmp_p_holm,placebo_p,sign_as_hypothesised,meets_criterion
+HD,1.0,0.142,True,False
+XOM,1.0,0.588,False,False
+CVX,1.0,0.89,False,False
+RRC,1.0,0.442,False,False
+MSFT,1.0,0.21,,False
+JNJ,1.0,0.36,,False
+MRK,1.0,0.518,,False
+PFE,1.0,0.194,,False
+"storm (signed, pooled)",0.6006203270069961,0.956,,False

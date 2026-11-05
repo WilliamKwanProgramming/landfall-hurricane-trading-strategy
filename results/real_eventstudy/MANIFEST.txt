@@ -1,0 +1,15 @@
+command: python experiments/real_eventstudy.py
+seed: 20261105
+git_commit: 642e4ece0bd12819941e12bc35986c0ac31ac380
+working_tree: clean
+date_utc: 2026-11-05T07:18:46Z
+python: 3.13.18
+numpy: 2.5.3
+machine: x86_64 Linux 6.18.44-fc-v236
+data: REAL: skfolio prices 1990-2022, HURDAT2 tracks (GitHub mirrors)
+protocol: docs/protocol.md
+placebo_sets: 1000
+events_total: 48
+events_primary: 39
+events_dropped_overlap: 9
+events_outside_price_data: 0
