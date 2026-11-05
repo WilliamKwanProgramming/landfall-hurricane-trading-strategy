@@ -11,8 +11,8 @@ build/
 *.a
 *.so
 
-# Raw vendor data and secrets: never commit these
-data/raw/
+# Raw vendor data, any price file (real or synthetic) and secrets: never commit these
+data/
 .env
 *.env
 
