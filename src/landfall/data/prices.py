@@ -11,13 +11,10 @@ where this was written. RRC (Range Resources) has many unchanged closes before 1
 days in 1990-1995) and a -67% close-to-close change on 1990-04-10; the event study screens for
 stale prices (see docs/protocol.md).
 
-`load_price_csv` reads prices a user supplies (for example insurer, reinsurer or commodity
-futures series): a CSV with a date column and one column per asset.
+Prices a user supplies (insurers, reinsurers, futures) are read by `landfall.prices`.
 """
 
 from __future__ import annotations
-
-import pathlib
 
 import pandas as pd
 
@@ -31,15 +28,6 @@ def load_skfolio_prices() -> tuple[pd.DataFrame, pd.Series]:
     p.index = pd.DatetimeIndex(p.index).astype("datetime64[s]")
     i.index = pd.DatetimeIndex(i.index).astype("datetime64[s]")
     return p, i
-
-
-def load_price_csv(path: str | pathlib.Path, date_column: str = "date") -> pd.DataFrame:
-    """Prices supplied by the user: CSV with `date_column` and one numeric column per asset."""
-    df = pd.read_csv(path, parse_dates=[date_column]).set_index(date_column).sort_index()
-    df.index = pd.DatetimeIndex(df.index).astype("datetime64[s]")
-    if df.index.has_duplicates:
-        raise ValueError(f"{path}: duplicate dates")
-    return df.astype(float)
 
 
 def simple_returns(prices: pd.DataFrame | pd.Series) -> pd.DataFrame | pd.Series:
