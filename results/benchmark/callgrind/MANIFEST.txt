@@ -1,8 +1,8 @@
-command: python experiments/profile_kernel.py --build /tmp/claude-0/-home-claude/2edde388-b5a2-5422-89c6-d04f4a2ec766/scratchpad/b-w2-gcc
+command: python experiments/profile_kernel.py
 seed: none (deterministic)
-git_commit: 6afe99059a121e1f6fd2d020a58cd7316b75fe85
-working_tree: modified code (uncommitted changes)
-date_utc: 2026-11-05T09:44:11Z
+git_commit: 782cef07784bbcc0a6e78d0e617553bc5751b708
+working_tree: clean code
+date_utc: 2026-11-05T10:53:41Z
 python: 3.13.18
 numpy: 2.5.3
 machine: x86_64 Linux 6.18.44-fc-v236

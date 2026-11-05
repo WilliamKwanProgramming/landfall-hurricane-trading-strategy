@@ -1,8 +1,8 @@
-command: python experiments/figure_data.py
+command: python experiments/figure_data.py --seed 20261105
 seed: 20261105
-git_commit: 6afe99059a121e1f6fd2d020a58cd7316b75fe85
-working_tree: modified code (uncommitted changes)
-date_utc: 2026-11-05T09:39:46Z
+git_commit: 782cef07784bbcc0a6e78d0e617553bc5751b708
+working_tree: clean code
+date_utc: 2026-11-05T10:53:34Z
 python: 3.13.18
 numpy: 2.5.3
 machine: x86_64 Linux 6.18.44-fc-v236

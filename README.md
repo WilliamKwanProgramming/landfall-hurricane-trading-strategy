@@ -230,20 +230,20 @@ largest relative difference is 2.94e-14).
 | wave 1 | numpy | 15 | 0.9902 | 0.7913 | 1.2585 |  |
 | wave 1 | cpp (wave-1 kernel) | 15 | 0.9398 | 0.8265 | 1.0902 |  |
 | wave 1 | ratio numpy / cpp (wave-1) | 15 | 1.1 | 0.7 | 1.5 |  |
-| wave 2 | numpy | 15 | 1.072 | 0.822 | 1.279 | 178 |
-| wave 2 | cpp reference (wave-1 kernel) | 15 | 1.071 | 0.947 | 1.308 | 178 |
-| wave 2 | cpp optimised | 15 | 0.483 | 0.423 | 0.571 | 80 |
-| wave 2 | ratio numpy / cpp optimised | 15 | 2.2 | 1.4 | 3.0 |  |
-| wave 2 | ratio cpp reference / cpp optimised | 15 | 2.2 | 1.7 | 3.1 |  |
-| wave 2 | ratio numpy / cpp reference | 15 | 1.0 | 0.6 | 1.3 |  |
+| wave 2 | numpy | 15 | 1.116 | 0.879 | 1.720 | 185 |
+| wave 2 | cpp reference (wave-1 kernel) | 15 | 1.178 | 0.901 | 1.779 | 195 |
+| wave 2 | cpp optimised | 15 | 0.512 | 0.414 | 0.778 | 85 |
+| wave 2 | ratio numpy / cpp optimised | 15 | 2.2 | 1.1 | 4.2 |  |
+| wave 2 | ratio cpp reference / cpp optimised | 15 | 2.3 | 1.2 | 4.3 |  |
+| wave 2 | ratio numpy / cpp reference | 15 | 0.9 | 0.5 | 1.9 |  |
 <!-- /table:benchmark -->
 
 Reading: the optimised kernel is **2.2 times faster than NumPy** (ratio of medians; range over runs
-1.4 to 3.0) and than the wave-1 kernel, which again matched NumPy (ratio 1.0). The timing is
-indicative: a shared 2-core machine, 1-minute load average 1.25 with another job on the second
-core, all engines single-threaded and interleaved. What limits it: the remaining `pow`, `exp` and
-`asin` calls are scalar glibc calls; vectorising them would need `-ffast-math` or a vector math
-library, which is not used so that results stay reproducible across compilers and machines.
+1.1 to 4.2) and than the wave-1 kernel, which again ran at about NumPy's speed (ratio 0.9). The
+timing is indicative: it ran inside `reproduce.sh` at nice 10 on a shared 2-core machine whose
+1-minute load average rose from 1.57 to 2.18, all engines single-threaded and interleaved. What
+limits it: the remaining `pow`, `exp` and `asin` calls are scalar glibc calls; vectorising them
+would need `-ffast-math` or a vector math library, not used so that results stay reproducible.
 
 ### 6. Data checks and the test suite
 
@@ -285,14 +285,15 @@ rules.
    `trading_*.csv` and `findings_trading.csv` (R1, R2, deflated Sharpe ratio), `sensitivity_*.csv`,
    and `MANIFEST.txt` (SHA-256 of the price file and of `assets.csv`, never the prices).
    A finding needs a Holm-adjusted p < 0.05, a placebo p < 0.05 and the hypothesised sign; anything
-   else is "no evidence", to be reported with the bootstrap interval and the power above.
+   else is "no evidence", to be reported with the bootstrap interval and the power above; a small
+   placebo p-value on its own is weak evidence (section 2).
 
 Here it was run only on synthetic prices without any effect (`scripts/make_synthetic_prices.py`):
-no finding, but 4 placebo p-values below 0.05 (see section 2). `tests/test_own_prices.py` checks that
+no finding, but three of the 13 placebo p-values are below 0.05 (see section 2). `tests/test_own_prices.py` checks that
 it finds an injected -6% effect on two insurers and nothing else.
 
 <!-- table:own_prices_synthetic -->
-**scripts/run_own_prices.py on SYNTHETIC prices without any injected effect (13 series, 39 events, 1000 placebo sets, 114 s; synthetic data)**
+**scripts/run_own_prices.py on SYNTHETIC prices without any injected effect (13 series, 39 events, 1000 placebo sets, 36 s; synthetic data)**
 
 | asset | group | events used | mean CAR[0,+10], % | Holm p | placebo p | finding |
 |---|---|---|---|---|---|---|

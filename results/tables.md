@@ -121,14 +121,14 @@
 | wave 1 | numpy | 15 | 0.9902 | 0.7913 | 1.2585 |  |
 | wave 1 | cpp (wave-1 kernel) | 15 | 0.9398 | 0.8265 | 1.0902 |  |
 | wave 1 | ratio numpy / cpp (wave-1) | 15 | 1.1 | 0.7 | 1.5 |  |
-| wave 2 | numpy | 15 | 1.072 | 0.822 | 1.279 | 178 |
-| wave 2 | cpp reference (wave-1 kernel) | 15 | 1.071 | 0.947 | 1.308 | 178 |
-| wave 2 | cpp optimised | 15 | 0.483 | 0.423 | 0.571 | 80 |
-| wave 2 | ratio numpy / cpp optimised | 15 | 2.2 | 1.4 | 3.0 |  |
-| wave 2 | ratio cpp reference / cpp optimised | 15 | 2.2 | 1.7 | 3.1 |  |
-| wave 2 | ratio numpy / cpp reference | 15 | 1.0 | 0.6 | 1.3 |  |
+| wave 2 | numpy | 15 | 1.116 | 0.879 | 1.720 | 185 |
+| wave 2 | cpp reference (wave-1 kernel) | 15 | 1.178 | 0.901 | 1.779 | 195 |
+| wave 2 | cpp optimised | 15 | 0.512 | 0.414 | 0.778 | 85 |
+| wave 2 | ratio numpy / cpp optimised | 15 | 2.2 | 1.1 | 4.2 |  |
+| wave 2 | ratio cpp reference / cpp optimised | 15 | 2.3 | 1.2 | 4.3 |  |
+| wave 2 | ratio numpy / cpp reference | 15 | 0.9 | 0.5 | 1.9 |  |
 
-**scripts/run_own_prices.py on SYNTHETIC prices without any injected effect (13 series, 39 events, 1000 placebo sets, 114 s; synthetic data)**
+**scripts/run_own_prices.py on SYNTHETIC prices without any injected effect (13 series, 39 events, 1000 placebo sets, 36 s; synthetic data)**
 
 | asset | group | events used | mean CAR[0,+10], % | Holm p | placebo p | finding |
 |---|---|---|---|---|---|---|
