@@ -1,0 +1,14 @@
+# ILLUSTRATIVE ASSUMPTION. Invented weights for a hypothetical entity whose exposure is
+# concentrated in Florida. NOT derived from any company's filings or exposure data.
+# Coordinates: approximate city centres (degrees north, degrees east).
+point,lat,lon,weight
+Miami,25.77,-80.19,0.25
+Fort Lauderdale,26.12,-80.14,0.10
+West Palm Beach,26.71,-80.05,0.08
+Tampa,27.95,-82.46,0.15
+Fort Myers,26.64,-81.87,0.07
+Orlando,28.54,-81.38,0.12
+Jacksonville,30.33,-81.66,0.10
+Pensacola,30.42,-87.22,0.05
+Tallahassee,30.44,-84.28,0.03
+Key West,24.56,-81.78,0.05

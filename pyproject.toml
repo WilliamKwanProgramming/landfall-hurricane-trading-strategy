@@ -23,6 +23,9 @@ test = ["pytest>=8", "statsmodels>=0.14", "arch>=6", "ruff>=0.5", "pybind11>=3.0
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+landfall = ["exposure_maps/*.csv"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"

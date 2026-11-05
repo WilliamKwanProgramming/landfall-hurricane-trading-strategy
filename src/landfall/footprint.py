@@ -207,3 +207,23 @@ def max_wind_cpp(storms: StormSet, lat_p: ArrayLike, lon_p: ArrayLike, grid: Lan
         storms.node_h, storms.lat, storms.lon, storms.vmax_kt, storms.rm_km, storms.b,
         np.asarray(lat_p, dtype=float), np.asarray(lon_p, dtype=float), grid.lat0, grid.lon0,
         grid.dlat, grid.dlon, grid.land, dt_h, decay)
+
+
+def storm_structure(vmax_kt: float, mslp_mb: float, lat: float,
+                    r34_quadrants_nmi: ArrayLike | None = None) -> tuple[float, float]:
+    """Radius of maximum wind (km) and Holland B for one storm state.
+
+    B from the pressure deficit (`holland_b`). Rm from the 34-kt radii when at least one quadrant
+    is positive (mean of the positive quadrants, converted from n mi) and Vmax > 34 kt, otherwise
+    from Willoughby et al. (2006) eq. 7a.
+    """
+    b = float(holland_b(vmax_kt, mslp_mb))
+    rm = float("nan")
+    if r34_quadrants_nmi is not None:
+        r = np.asarray(r34_quadrants_nmi, dtype=float)
+        r = r[np.isfinite(r) & (r > 0)]
+        if r.size:
+            rm = rmax_from_r34_km(float(vmax_kt), float(r.mean()) * KM_PER_NMI, b)
+    if not np.isfinite(rm):
+        rm = float(rmax_willoughby_km(vmax_kt, lat))
+    return rm, b

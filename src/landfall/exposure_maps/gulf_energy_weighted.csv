@@ -1,0 +1,14 @@
+# ILLUSTRATIVE ASSUMPTION. Invented weights for a hypothetical entity whose exposure is
+# concentrated in US Gulf Coast refining and energy ports. NOT derived from any company's
+# filings, facility lists or capacity data.
+# Coordinates: approximate city or port locations (degrees north, degrees east).
+point,lat,lon,weight
+Corpus Christi,27.80,-97.40,0.10
+Baytown (Houston Ship Channel),29.73,-95.02,0.25
+Texas City,29.38,-94.90,0.10
+Port Arthur,29.90,-93.93,0.15
+Lake Charles,30.23,-93.22,0.10
+Baton Rouge,30.45,-91.19,0.10
+New Orleans,29.95,-90.07,0.08
+Port Fourchon,29.11,-90.20,0.07
+Pascagoula,30.37,-88.56,0.05
